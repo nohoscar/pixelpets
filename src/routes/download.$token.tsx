@@ -133,6 +133,27 @@ function DownloadPage() {
           </div>
         </div>
 
+        {/* Cursor Pack */}
+        <div className="glass rounded-xl p-6 mb-6 border border-neon-pink/30">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-display text-[10px] text-neon-pink">▸ BONUS · CURSOR PACK</p>
+            <span className="text-2xl">🎮</span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            13 cursores de armas de videojuegos en formato .cur para Windows: CS:GO, Valorant, Lightsaber, Katana, Shuriken, BFG y más.
+          </p>
+          <a
+            href="/cursors-pack.zip"
+            download="cursors-pack.zip"
+            className="block w-full px-4 py-3 rounded-md border border-neon-pink/60 bg-neon-pink/10 text-center font-display text-[10px] text-neon-pink hover:bg-neon-pink/20 hover:shadow-[var(--shadow-neon-pink)] transition-all"
+          >
+            ▸ DESCARGAR CURSORES (.zip)
+          </a>
+          <p className="text-[9px] text-muted-foreground mt-2">
+            Instrucciones: Configuración → Mouse → Punteros → Examinar → selecciona el .cur
+          </p>
+        </div>
+
         {/* Next steps */}
         <div className="glass rounded-xl p-6 mb-6">
           <p className="font-display text-[10px] text-neon mb-4">▸ PRÓXIMOS_PASOS</p>
