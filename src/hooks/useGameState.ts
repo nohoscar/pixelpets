@@ -17,6 +17,7 @@ export interface PersistedGameState {
   pomodoroConfig: { workMinutes: number; breakMinutes: number };
   locale: "en" | "pt";
   nightModeManualOverride: boolean;
+  petNames: Record<string, string>; // petKind → custom name
 }
 
 export interface GameActions {
@@ -30,6 +31,8 @@ export interface GameActions {
   setLocale: (locale: "en" | "pt") => void;
   setNightModeManualOverride: (v: boolean) => void;
   setPomodoroConfig: (config: { workMinutes: number; breakMinutes: number }) => void;
+  setPetName: (kind: string, name: string) => void;
+  getPetName: (kind: string) => string;
 }
 
 export type GameState = PersistedGameState & GameActions & {
@@ -74,6 +77,7 @@ const DEFAULT_STATE: PersistedGameState = {
   pomodoroConfig: { workMinutes: 25, breakMinutes: 5 },
   locale: "en",
   nightModeManualOverride: false,
+  petNames: {},
 };
 
 export function calculateLevel(xp: number): number {
@@ -165,6 +169,15 @@ export function useGameState(): GameState {
     persist({ ...prev, pomodoroConfig: config });
   }, [persist]);
 
+  const setPetName = useCallback((kind: string, name: string) => {
+    const prev = stateRef.current;
+    persist({ ...prev, petNames: { ...prev.petNames, [kind]: name } });
+  }, [persist]);
+
+  const getPetName = useCallback((kind: string) => {
+    return stateRef.current.petNames[kind] || "";
+  }, []);
+
   // Achievement checking — runs on every persist
   const achievementCallbackRef = useRef<((name: string, icon: string) => void) | null>(null);
 
@@ -202,6 +215,8 @@ export function useGameState(): GameState {
     setLocale,
     setNightModeManualOverride,
     setPomodoroConfig,
+    setPetName,
+    getPetName,
     achievementCallbackRef,
   };
 }

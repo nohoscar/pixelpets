@@ -200,7 +200,10 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const clearPets = () => { setPets([]); setStats(null); petPositionsRef.current.clear(); setActivePetId(""); };
 
   const activePet = pets.find((p) => p.id === activePetId) ?? pets[0];
-  const currentPetName = activePet ? PETS[activePet.kind].name : "—";
+  const activePetKind = activePet?.kind;
+  const currentPetName = activePet
+    ? (gameState.petNames[activePet.kind] || PETS[activePet.kind].name)
+    : "—";
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden">
@@ -242,6 +245,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
                 onPositionChange={(pos) => petPositionsRef.current.set(p.id, pos)}
                 onPetClick={() => setActivePetId(p.id)}
                 speakRef={speakRef}
+                customName={gameState.petNames[p.kind] || undefined}
               />
             );
           })}
@@ -277,6 +281,9 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
             onAchievementUnlock={showAchievementToast}
             onPomodoroWorkEnd={handlePomodoroWorkEnd}
             onPomodoroBreakEnd={handlePomodoroBreakEnd}
+            activePetKind={activePetKind}
+            petName={activePetKind ? (gameState.petNames[activePetKind] ?? "") : ""}
+            onPetNameChange={(name) => { if (activePetKind) gameState.setPetName(activePetKind, name); }}
           />
           {pets.length > 0 && (
             <StatsPanel

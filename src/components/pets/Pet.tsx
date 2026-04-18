@@ -6,6 +6,7 @@ import type { SystemAwareness } from "@/hooks/useSystemAwareness";
 import type { GameState } from "@/hooks/useGameState";
 import { AccessoryRenderer } from "./AccessoryRenderer";
 import { ParticleSystem, type ParticleConfig } from "./ParticleSystem";
+import { getPersonality, getChaosMultipliers } from "./petPersonality";
 
 export type PetStats = {
   hunger: number;    // 0 (hambriento) → 100 (lleno)
@@ -37,12 +38,13 @@ interface PetProps {
   onPositionChange?: (pos: { x: number; y: number }) => void;
   onPetClick?: () => void;
   speakRef?: { current: ((msg: string) => void) | null };
+  customName?: string;
 }
 
 export function Pet({
   id, kind, initialX, initialY, cursorRef, followCursor, onRemove,
   onStatsChange, actionRef, awareness, gameState, paused, onPositionChange, onPetClick,
-  speakRef,
+  speakRef, customName,
 }: PetProps) {
   const def = PETS[kind];
   const size = def.size;
@@ -73,23 +75,28 @@ export function Pet({
   // Notify parent of position changes for interaction detection
   useEffect(() => { onPositionChange?.(pos); }, [pos, onPositionChange]);
 
+  // Personality modifiers
+  const personality = getPersonality(kind);
+
   // Decay stats over time (every 6s)
   useEffect(() => {
     const id = setInterval(() => {
       setStats((s) => {
+        // Cthulhu gets chaotic random multipliers each tick
+        const p = kind === "cthulhu" ? { ...personality, ...getChaosMultipliers() } : personality;
         const next: PetStats = {
           ...s,
-          hunger: Math.max(0, s.hunger - 2),
-          happiness: Math.max(0, s.happiness - 1.5),
+          hunger: Math.max(0, s.hunger - 2 * p.hungerDecay),
+          happiness: Math.max(0, s.happiness - 1.5 * p.happinessDecay),
           energy: stateRef.current === "sleep"
-            ? Math.min(100, s.energy + 6)
-            : Math.max(0, s.energy - 1),
+            ? Math.min(100, s.energy + 6 * p.sleepRecovery)
+            : Math.max(0, s.energy - 1 * p.energyDecay),
         };
         return next;
       });
     }, 6000);
     return () => clearInterval(id);
-  }, []);
+  }, [kind, personality]);
 
   // Pick random target periodically
   useEffect(() => {
@@ -250,7 +257,7 @@ export function Pet({
     if (!actionRef) return;
     actionRef.current = {
       feed: () => {
-        setStats((s) => ({ ...s, hunger: Math.min(100, s.hunger + 35) }));
+        setStats((s) => ({ ...s, hunger: Math.min(100, s.hunger + 35 + personality.feedBonus) }));
         playSound("eat");
         speak("¡ñam!");
         emitParticles("food");
@@ -260,7 +267,7 @@ export function Pet({
         }
       },
       play: () => {
-        setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 35), energy: Math.max(0, s.energy - 10) }));
+        setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 35 + personality.playBonus), energy: Math.max(0, s.energy - 10) }));
         playSound("happy");
         speak("¡yay!");
         setState("jump");
@@ -282,7 +289,7 @@ export function Pet({
         }
       },
     };
-  }, [actionRef, gameState, emitParticles]);
+  }, [actionRef, gameState, emitParticles, personality]);
 
   // System awareness reactions
   const lastReactionRef = useRef<{
@@ -431,7 +438,7 @@ export function Pet({
     emitParticles("stars");
     setTimeout(() => setState("walk"), 500);
     setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 5) }));
-    playSound("pop");
+    playSound(personality.clickSound as Parameters<typeof playSound>[0]);
     if (gameState) {
       gameState.addXp(2);
       gameState.incrementClickCount();
@@ -521,7 +528,7 @@ export function Pet({
       emitParticles("stars");
       setTimeout(() => setState("walk"), 500);
       setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 5) }));
-      playSound("pop");
+      playSound(personality.clickSound as Parameters<typeof playSound>[0]);
       if (gameState) {
         gameState.addXp(2);
         gameState.incrementClickCount();
@@ -589,7 +596,7 @@ export function Pet({
         e.preventDefault();
         onRemove(id);
       }}
-      title={`${def.name} — arrastra, click para jugar`}
+      title={`${customName ?? def.name} — arrastra, click para jugar`}
     >
       {/* need icons */}
       {needIcons.length > 0 && state !== "sleep" && !isFainted && (

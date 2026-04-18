@@ -45,7 +45,7 @@ function DesktopPanel() {
   const [currentKind, setCurrentKind] = useState<PetKind>("cat");
   const [cursor, setCursor] = useState<CursorKind>("csgo");
   const [followCursor, setFollowCursor] = useState(false);
-  const [stats, setStats] = useState<PetStats>({ hunger: 80, happiness: 80, energy: 80 });
+  const [stats, setStats] = useState<PetStats>({ hunger: 80, happiness: 80, energy: 80, xp: 0, level: 1 });
   const awareness = useSystemAwareness();
 
   // Listen for stats updates from the pet overlay

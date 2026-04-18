@@ -19,6 +19,9 @@ interface Props {
   onAchievementUnlock?: (name: string, icon: string) => void;
   onPomodoroWorkEnd?: () => void;
   onPomodoroBreakEnd?: () => void;
+  activePetKind?: PetKind;
+  petName?: string;
+  onPetNameChange?: (name: string) => void;
 }
 
 export function ControlPanel({
@@ -26,6 +29,7 @@ export function ControlPanel({
   petCount, onAddPet, onClearPets, gameState,
   onStartGame, onAchievementUnlock,
   onPomodoroWorkEnd, onPomodoroBreakEnd,
+  activePetKind, petName, onPetNameChange,
 }: Props) {
   const level = gameState?.level ?? 1;
   const unlocked = getUnlockedAccessories(level);
@@ -48,6 +52,23 @@ export function ControlPanel({
         <h1 className="font-display text-lg text-neon leading-tight">🐾 PIXEL<span className="text-neon-pink">PETS</span></h1>
         <p className="text-xs text-muted-foreground mt-1">{t("control.subtitle")}</p>
       </header>
+
+      {/* Pet Name Editor */}
+      {activePetKind && petCount > 0 && (
+        <div className="mb-4 p-2 rounded-lg border border-border bg-secondary/30">
+          <label className="text-[8px] font-display text-muted-foreground block mb-1">PET NAME</label>
+          <input
+            type="text"
+            value={petName ?? ""}
+            placeholder={PETS[activePetKind].name}
+            onChange={(e) => onPetNameChange?.(e.target.value)}
+            onBlur={(e) => onPetNameChange?.(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+            maxLength={20}
+            className="w-full px-2 py-1 rounded border border-border bg-secondary/40 text-foreground text-[10px] font-display focus:border-primary/60 focus:outline-none transition-colors"
+          />
+        </div>
+      )}
 
       {/* ★ PETS — Primary section, big and prominent */}
       <section className="mb-5">
