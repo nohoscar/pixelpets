@@ -18,6 +18,7 @@ declare global {
       setPet: (kind: string) => void;
       setFollow: (value: boolean) => void;
       petAction: (action: string) => void;
+      setCursor: (name: string) => void;
       onStatsUpdate: (cb: (stats: PetStats) => void) => void;
     };
   }
@@ -93,7 +94,11 @@ function DesktopPanel() {
         <div className="w-full max-w-sm flex flex-col gap-4">
           <ControlPanel
             cursor={cursor}
-            onCursor={setCursor}
+            onCursor={(c) => {
+              setCursor(c);
+              // Apply cursor at Windows system level
+              window.pixelpets?.setCursor(c);
+            }}
             followCursor={followCursor}
             onToggleFollow={(v) => {
               setFollowCursor(v);

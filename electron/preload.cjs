@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("pixelpets", {
   setPet: (kind) => ipcRenderer.send("set-pet", kind),
   setFollow: (value) => ipcRenderer.send("set-follow", value),
   petAction: (action) => ipcRenderer.send("pet-action", action),
+  setCursor: (name) => ipcRenderer.send("set-cursor", name),
   // Pet overlay → main → panel (stats updates)
   sendStats: (stats) => ipcRenderer.send("stats-update", stats),
   // Mouse hit-testing: pet overlay tells main when mouse is over the pet
