@@ -1,0 +1,7 @@
+{
+  "name": "desktop-pets",
+  "version": "1.0.0",
+  "description": "Tu mascotita de escritorio",
+  "main": "main.cjs",
+  "author": "Desktop Pets"
+}

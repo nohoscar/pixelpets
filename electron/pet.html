@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Desktop Pet</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background: transparent !important;
+      overflow: hidden;
+      cursor: none;
+    }
+    #pet {
+      position: fixed;
+      width: 80px; height: 80px;
+      pointer-events: none;
+      transition: top 0.05s linear, left 0.05s linear;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+      image-rendering: pixelated;
+    }
+    .bubble {
+      position: fixed;
+      padding: 4px 10px;
+      background: rgba(20, 16, 40, 0.85);
+      color: #7af5b0;
+      font-family: monospace;
+      font-size: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(122, 245, 176, 0.5);
+      pointer-events: none;
+      animation: pop 1.6s ease-out forwards;
+      box-shadow: 0 0 12px rgba(122, 245, 176, 0.4);
+    }
+    @keyframes pop {
+      0% { opacity: 0; transform: translate(-50%, -10px) scale(0.8); }
+      15% { opacity: 1; transform: translate(-50%, -16px) scale(1); }
+      80% { opacity: 1; transform: translate(-50%, -16px) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -22px) scale(0.9); }
+    }
+  </style>
+</head>
+<body>
+  <div id="pet"></div>
+  <script src="./pet-renderer.js"></script>
+</body>
+</html>
