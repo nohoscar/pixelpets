@@ -18,4 +18,6 @@ contextBridge.exposeInMainWorld("pixelpets", {
   onStatsUpdate: (cb) => ipcRenderer.on("stats-update", (_e, stats) => cb(stats)),
   // Battery info from main process (Electron powerMonitor)
   onBatteryUpdate: (cb) => ipcRenderer.on("battery-update", (_e, info) => cb(info)),
+  // Music detection from main process
+  onMusicUpdate: (cb) => ipcRenderer.on("music-update", (_e, info) => cb(info)),
 });

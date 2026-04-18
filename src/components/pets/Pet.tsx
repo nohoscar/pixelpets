@@ -413,6 +413,13 @@ export function Pet({
         setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 10) }));
       }
     }
+
+    // Music detection → pet dances and gains happiness
+    if (awareness.musicDetected && stateRef.current !== "sleep" &&
+        stateRef.current !== "drag" && stateRef.current !== "faint") {
+      // Slowly gain happiness while music plays
+      setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 0.5) }));
+    }
   }, [awareness]);
 
 
@@ -540,6 +547,24 @@ export function Pet({
 
   // Night Mode: auto-equip pajamas (task 3.3)
   const nightModeAppliedRef = useRef(false);
+
+  // Music detection → pet dances and reacts
+  const musicReactedRef = useRef(false);
+  useEffect(() => {
+    if (!awareness) return;
+    if (awareness.musicDetected && !musicReactedRef.current) {
+      musicReactedRef.current = true;
+      const musicPhrases = ["🎵 lalala 🎵", "vibing...", "buen gusto!", "🎶 dance! 🎶", "♪ ♫ ♪", "this slaps!"];
+      speak(musicPhrases[Math.floor(Math.random() * musicPhrases.length)], 2500);
+      if (stateRef.current !== "drag" && stateRef.current !== "sleep" && stateRef.current !== "faint") {
+        setState("jump");
+        setTimeout(() => setState("walk"), 500);
+      }
+    } else if (!awareness.musicDetected && musicReactedRef.current) {
+      musicReactedRef.current = false;
+      speak("la música paró 😢", 2000);
+    }
+  }, [awareness?.musicDetected]);
   useEffect(() => {
     if (!awareness || !gameState) return;
     const isNight = awareness.timeOfDay === "night";
@@ -566,6 +591,7 @@ export function Pet({
   else if (awareness?.batteryTier === "low") needIcons.push({ icon: "🔋", label: "batería baja" });
   if (awareness?.batteryCharging && awareness.hasBattery) needIcons.push({ icon: "⚡", label: "cargando" });
   if (awareness?.timeOfDay === "night" && stats.energy < 60) needIcons.push({ icon: "🌙", label: "noche" });
+  if (awareness?.musicDetected) needIcons.push({ icon: "🎵", label: "música" });
 
   const isFainted = state === "faint";
 
@@ -623,7 +649,11 @@ export function Pet({
           {bubble}
         </div>
       )}
-      <div className={state === "idle" || state === "sleep" ? "animate-bob w-full h-full" : "w-full h-full"}>
+      <div className={
+        awareness?.musicDetected && state !== "sleep" && state !== "faint"
+          ? "animate-bounce w-full h-full"
+          : state === "idle" || state === "sleep" ? "animate-bob w-full h-full" : "w-full h-full"
+      }>
         {def.render(facing, step)}
       </div>
       {/* Accessory overlay (task 2.8) */}

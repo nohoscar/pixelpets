@@ -23,6 +23,8 @@ export interface SystemAwareness {
   isHidden: boolean;
   timeOfDay: TimeOfDay;
   hour: number;
+  /** true cuando se detecta música (Spotify, YouTube, etc.) — solo en Electron */
+  musicDetected: boolean;
 }
 
 interface BatteryManager extends EventTarget {
@@ -59,6 +61,17 @@ export function useSystemAwareness(): SystemAwareness {
   const [idleSeconds, setIdleSeconds] = useState(0);
   const [isHidden, setIsHidden] = useState(false);
   const [hour, setHour] = useState(() => new Date().getHours());
+  const [musicDetected, setMusicDetected] = useState(false);
+
+  // Music detection from Electron IPC
+  useEffect(() => {
+    const w = window as any;
+    if (w.pixelpets?.onMusicUpdate) {
+      w.pixelpets.onMusicUpdate((info: { musicDetected: boolean }) => {
+        setMusicDetected(info.musicDetected);
+      });
+    }
+  }, []);
 
   // Battery
   useEffect(() => {
@@ -122,6 +135,7 @@ export function useSystemAwareness(): SystemAwareness {
     isHidden,
     timeOfDay: getTimeOfDay(hour),
     hour,
+    musicDetected,
   };
 }
 

@@ -294,6 +294,43 @@ app.whenReady().then(() => {
   powerMonitor.on("on-battery", sendBattery);
   // Send initial state after windows load
   setTimeout(sendBattery, 3000);
+
+  // Music detection — scan window titles for Spotify/YouTube/music apps
+  let lastMusicState = false;
+  const musicKeywords = [
+    "spotify", "youtube", "music", "soundcloud", "deezer",
+    "apple music", "tidal", "pandora", "amazon music",
+    "vlc", "foobar", "winamp", "itunes",
+  ];
+  const checkMusic = () => {
+    try {
+      const windows = BrowserWindow.getAllWindows();
+      // Check all Electron windows (won't catch external apps)
+      // For external apps, we use a PowerShell command on Windows
+      if (process.platform === "win32") {
+        const { execSync } = require("child_process");
+        try {
+          const output = execSync(
+            'powershell -Command "Get-Process | Where-Object {$_.MainWindowTitle -ne \'\'} | Select-Object -ExpandProperty MainWindowTitle"',
+            { encoding: "utf8", timeout: 3000, stdio: ["pipe", "pipe", "ignore"] }
+          );
+          const titles = output.toLowerCase();
+          const isPlaying = musicKeywords.some((kw) => titles.includes(kw));
+          if (isPlaying !== lastMusicState) {
+            lastMusicState = isPlaying;
+            const info = { musicDetected: isPlaying };
+            if (petWindow) petWindow.webContents.send("music-update", info);
+            if (panelWindow) panelWindow.webContents.send("music-update", info);
+          }
+        } catch {
+          // PowerShell failed, skip this tick
+        }
+      }
+    } catch {}
+  };
+  // Check every 5 seconds
+  setInterval(checkMusic, 5000);
+  setTimeout(checkMusic, 5000);
 });
 
 // Keep app alive on macOS even if all windows close.

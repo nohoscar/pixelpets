@@ -37,6 +37,7 @@
 
   --animate-walk: walk 0.4s steps(2) infinite;
   --animate-bob: bob 1.6s ease-in-out infinite;
+  --animate-bounce: dance-bounce 0.4s ease-in-out infinite;
   --animate-flicker: flicker 3s ease-in-out infinite;
   --animate-scan: scan 6s linear infinite;
 }
@@ -49,6 +50,11 @@
 @keyframes bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
+}
+@keyframes dance-bounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(-5deg); }
+  75% { transform: translateY(-8px) rotate(5deg); }
 }
 @keyframes flicker {
   0%, 100% { opacity: 1; }
