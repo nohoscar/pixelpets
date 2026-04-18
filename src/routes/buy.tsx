@@ -46,26 +46,18 @@ function BuyPage() {
     setLoading(true);
     setError(null);
 
-    try {
-      const res = await fetch("/api/purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
+    // Free beta — skip payment, go straight to download
+    const purchaseData = JSON.stringify({
+      email,
+      licenseKey: "BETA-FREE-TEST-MODE",
+      ts: Date.now(),
+    });
+    const token = btoa(purchaseData)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
 
-      if (!data.ok) {
-        setError(data.error || "Error al procesar la compra");
-        return;
-      }
-
-      // Navigate to download page with the token
-      navigate({ to: "/download/$token", params: { token: data.token } });
-    } catch {
-      setError("Error de conexión. Intenta de nuevo.");
-    } finally {
-      setLoading(false);
-    }
+    navigate({ to: "/download/$token", params: { token } });
   };
 
   return (
@@ -122,11 +114,11 @@ function BuyPage() {
                 </div>
 
                 <div className="flex items-baseline gap-2 mb-1">
-                  <span className="font-display text-5xl text-neon-pink">$4.99</span>
-                  <span className="text-sm text-muted-foreground">USD</span>
+                  <span className="font-display text-5xl text-neon">GRATIS</span>
+                  <span className="text-sm text-muted-foreground line-through">$4.99</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-6">
-                  Pago único · Sin suscripciones
+                  Beta abierta · Prueba todo gratis
                 </p>
 
                 <ul className="space-y-2 text-xs text-muted-foreground mb-6">
@@ -158,7 +150,7 @@ function BuyPage() {
                     disabled={loading || !email}
                     className="w-full px-4 py-3.5 rounded-md bg-primary text-primary-foreground font-display text-[11px] hover:shadow-[0_0_28px_var(--primary)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? "▸ PROCESANDO..." : "▸ COMPRAR · $4.99 USD"}
+                    {loading ? "▸ PROCESANDO..." : "▸ DESCARGAR GRATIS"}
                   </button>
 
                   {error && (

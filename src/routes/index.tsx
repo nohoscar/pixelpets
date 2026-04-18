@@ -133,7 +133,7 @@ function Index() {
               to="/buy"
               className="px-5 py-2.5 rounded-md bg-primary text-primary-foreground font-display text-[10px] hover:shadow-[0_0_24px_var(--primary)] transition-all"
             >
-              ▸ COMPRAR APP · $4.99
+              ▸ DESCARGAR GRATIS
             </Link>
             <a
               href="#how"
