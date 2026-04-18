@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { PetShowcase } from "@/components/PetShowcase";
+import { PetGallery } from "@/components/PetGallery";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { useGameState } from "@/hooks/useGameState";
+import { applyTheme, type ThemeId } from "@/lib/themes";
 
 export const Route = createFileRoute("/buy")({
   component: BuyPage,
@@ -37,6 +39,13 @@ const COMPARISON = [
 
 function BuyPage() {
   const gameState = useGameState();
+
+  useEffect(() => {
+    if (gameState.theme && gameState.theme !== "cyberpunk") {
+      applyTheme(gameState.theme as ThemeId);
+    }
+  }, []);
+
   return (
     <I18nProvider initialLocale={gameState.locale}>
       <BuyPageContent />
@@ -122,6 +131,12 @@ function BuyPageContent() {
             </div>
 
             <PetShowcase />
+
+            {/* Pet Gallery */}
+            <div className="mt-6">
+              <p className="font-display text-[10px] text-neon-pink mb-3">▸ PET_GALLERY</p>
+              <PetGallery />
+            </div>
           </div>
 
           {/* PRICING CARD */}

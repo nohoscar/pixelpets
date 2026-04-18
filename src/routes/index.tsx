@@ -14,6 +14,9 @@ import { MemoryGame } from "@/components/games/MemoryGame";
 import { AchievementToast } from "@/components/AchievementToast";
 import { WidgetPanel } from "@/components/WidgetPanel";
 import { I18nProvider, useI18n } from "@/lib/i18n";
+import { Onboarding, useOnboarding } from "@/components/Onboarding";
+import { applyTheme, type ThemeId } from "@/lib/themes";
+import { AmbientSound } from "@/components/AmbientSound";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -28,8 +31,19 @@ interface PetInstance {
 
 function Index() {
   const gameState = useGameState();
+  const { showOnboarding, dismissOnboarding } = useOnboarding();
+
+  // Apply persisted theme on mount
+  useEffect(() => {
+    if (gameState.theme && gameState.theme !== "cyberpunk") {
+      applyTheme(gameState.theme as ThemeId);
+    }
+  }, []);
+
   return (
     <I18nProvider initialLocale={gameState.locale}>
+      {showOnboarding && <Onboarding onDismiss={dismissOnboarding} />}
+      <AmbientSound soundId={gameState.ambientSound} />
       <IndexContent gameState={gameState} />
     </I18nProvider>
   );

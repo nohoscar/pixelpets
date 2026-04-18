@@ -5,6 +5,7 @@ import { getUnlockedAccessories, getLockedAccessories } from "./pets/accessories
 import { ACHIEVEMENTS } from "@/hooks/useGameState";
 import { PomodoroTimer } from "./PomodoroTimer";
 import { useI18n } from "@/lib/i18n";
+import { THEMES, applyTheme, type ThemeId } from "@/lib/themes";
 
 interface Props {
   cursor: CursorKind;
@@ -51,6 +52,56 @@ export function ControlPanel({
         </div>
         <h1 className="font-display text-lg text-neon leading-tight">🐾 PIXEL<span className="text-neon-pink">PETS</span></h1>
         <p className="text-xs text-muted-foreground mt-1">{t("control.subtitle")}</p>
+
+        {/* Theme selector */}
+        {gameState && (
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-[8px] font-display text-muted-foreground">THEME</span>
+            <div className="flex gap-1.5">
+              {THEMES.map((theme) => (
+                <button
+                  key={theme.id}
+                  onClick={() => { gameState.setTheme(theme.id); applyTheme(theme.id as ThemeId); }}
+                  className={`w-5 h-5 rounded-full border-2 transition-all ${
+                    gameState.theme === theme.id
+                      ? "border-foreground scale-110 shadow-[0_0_8px_var(--neon)]"
+                      : "border-border hover:border-foreground/60"
+                  }`}
+                  style={{ background: theme.color }}
+                  title={theme.label}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Ambient sound selector */}
+        {gameState && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[8px] font-display text-muted-foreground">AMBIENT</span>
+            <div className="flex gap-1">
+              {([
+                { id: "rain", icon: "🌧️" },
+                { id: "lofi", icon: "🎵" },
+                { id: "nature", icon: "🌿" },
+                { id: "silent", icon: "🔇" },
+              ] as const).map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => gameState.setAmbientSound(s.id)}
+                  className={`px-1.5 py-1 rounded text-sm transition-all ${
+                    gameState.ambientSound === s.id
+                      ? "bg-primary/20 border border-primary/40"
+                      : "hover:bg-secondary/40"
+                  }`}
+                  title={s.id}
+                >
+                  {s.icon}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Pet Name Editor */}

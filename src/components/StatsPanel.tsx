@@ -2,6 +2,7 @@ import type { PetStats } from "./pets/Pet";
 import type { SystemAwareness } from "@/hooks/useSystemAwareness";
 import type { GameState } from "@/hooks/useGameState";
 import { useI18n } from "@/lib/i18n";
+import { ShareButton } from "./ShareButton";
 
 interface Props {
   stats: PetStats | null;
@@ -62,6 +63,7 @@ export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep,
     <section className="glass rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-display text-[10px] text-neon-pink">{petName.toUpperCase()} · {t("stats.title")}</h2>
+        <ShareButton petName={petName} stats={stats} gameState={gameState} />
       </div>
       <div className="space-y-3 mb-4">
         <Bar label={t("stats.hunger")} value={stats.hunger} color="hsl(20 90% 60%)" />
@@ -86,9 +88,22 @@ export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep,
               }}
             />
           </div>
-          <p className="text-[8px] text-muted-foreground mt-1 text-right">
-            {xpInLevel}/{xpNeeded} → {t("stats.level")} {currentLevel + 1}
-          </p>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-[8px] text-muted-foreground">
+              {xpInLevel}/{xpNeeded} → {t("stats.level")} {currentLevel + 1}
+            </p>
+            {gameState.streakDays > 0 && (
+              <span
+                className="text-[9px] font-display"
+                style={{
+                  color: gameState.streakDays > 3 ? "hsl(20 90% 55%)" : "var(--muted-foreground)",
+                  animation: gameState.streakDays > 3 ? "pulse-glow 2s ease-in-out infinite" : undefined,
+                }}
+              >
+                🔥 Day {gameState.streakDays}
+              </span>
+            )}
+          </div>
         </div>
       )}
 

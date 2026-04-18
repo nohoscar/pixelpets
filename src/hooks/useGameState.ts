@@ -18,6 +18,10 @@ export interface PersistedGameState {
   locale: "en" | "pt";
   nightModeManualOverride: boolean;
   petNames: Record<string, string>; // petKind → custom name
+  lastActiveDate: string; // ISO date string "2026-04-18"
+  streakDays: number;     // consecutive days active
+  theme: string;          // ThemeId
+  ambientSound: string;   // "rain" | "lofi" | "nature" | "silent"
 }
 
 export interface GameActions {
@@ -33,6 +37,8 @@ export interface GameActions {
   setPomodoroConfig: (config: { workMinutes: number; breakMinutes: number }) => void;
   setPetName: (kind: string, name: string) => void;
   getPetName: (kind: string) => string;
+  setTheme: (theme: string) => void;
+  setAmbientSound: (sound: string) => void;
 }
 
 export type GameState = PersistedGameState & GameActions & {
@@ -78,6 +84,10 @@ const DEFAULT_STATE: PersistedGameState = {
   locale: "en",
   nightModeManualOverride: false,
   petNames: {},
+  lastActiveDate: "",
+  streakDays: 0,
+  theme: "cyberpunk",
+  ambientSound: "silent",
 };
 
 export function calculateLevel(xp: number): number {
@@ -95,6 +105,18 @@ function readFromStorage(): PersistedGameState {
   }
 }
 
+function updateStreak(state: PersistedGameState): PersistedGameState {
+  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  if (state.lastActiveDate === today) return state;
+
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (state.lastActiveDate === yesterday) {
+    return { ...state, lastActiveDate: today, streakDays: state.streakDays + 1 };
+  }
+  // Older or never set → reset streak
+  return { ...state, lastActiveDate: today, streakDays: 1 };
+}
+
 function writeToStorage(state: PersistedGameState): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -104,7 +126,12 @@ function writeToStorage(state: PersistedGameState): void {
 // --- Hook ---
 
 export function useGameState(): GameState {
-  const [state, setState] = useState<PersistedGameState>(() => readFromStorage());
+  const [state, setState] = useState<PersistedGameState>(() => {
+    const loaded = readFromStorage();
+    const withStreak = updateStreak(loaded);
+    if (withStreak !== loaded) writeToStorage(withStreak);
+    return withStreak;
+  });
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -178,6 +205,16 @@ export function useGameState(): GameState {
     return stateRef.current.petNames[kind] || "";
   }, []);
 
+  const setTheme = useCallback((theme: string) => {
+    const prev = stateRef.current;
+    persist({ ...prev, theme });
+  }, [persist]);
+
+  const setAmbientSound = useCallback((sound: string) => {
+    const prev = stateRef.current;
+    persist({ ...prev, ambientSound: sound });
+  }, [persist]);
+
   // Achievement checking — runs on every persist
   const achievementCallbackRef = useRef<((name: string, icon: string) => void) | null>(null);
 
@@ -217,6 +254,8 @@ export function useGameState(): GameState {
     setPomodoroConfig,
     setPetName,
     getPetName,
+    setTheme,
+    setAmbientSound,
     achievementCallbackRef,
   };
 }
