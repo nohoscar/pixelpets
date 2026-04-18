@@ -45,15 +45,54 @@ jobs:
         run: npm ci
 
       - name: Build React app
-        run: npm run build
+        run: npx vite build
 
-      - name: Prepare minimal Electron app
+      - name: Prepare Electron app
+        shell: bash
         run: |
           rm -rf electron-package
-          mkdir -p electron-package/dist
-          cp -R dist/client electron-package/dist/
-          cp electron/main.cjs electron/pet.html electron/pet-renderer.js electron-package/
-          cp electron/package.json electron-package/package.json
+          mkdir -p electron-package
+
+          # Copy Electron files
+          cp electron/main.cjs electron-package/
+          cp electron/pet.html electron-package/
+          cp electron/pet-renderer.js electron-package/
+          cp electron/package.json electron-package/
+
+          # The Electron pet overlay uses pet.html (standalone, no React build needed).
+          # The panel window needs the built React app.
+          # TanStack Start SSR build puts assets in dist/client/ but no index.html,
+          # so we generate a minimal one that loads the assets.
+          mkdir -p electron-package/dist/client
+
+          # Copy built client assets
+          if [ -d "dist/client" ]; then
+            cp -R dist/client/* electron-package/dist/client/ 2>/dev/null || true
+          fi
+
+          # Find the main JS and CSS bundles
+          MAIN_JS=$(ls dist/client/assets/index-*.js 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
+          MAIN_CSS=$(ls dist/client/assets/styles-*.css 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
+
+          # Generate index.html for the Electron panel window
+          cat > electron-package/dist/client/index.html << HTMLEOF
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>PixelPets</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;700&display=swap" />
+            ${MAIN_CSS:+<link rel="stylesheet" href="./assets/$MAIN_CSS" />}
+          </head>
+          <body>
+            <div id="root"></div>
+            ${MAIN_JS:+<script type="module" src="./assets/$MAIN_JS"></script>}
+          </body>
+          </html>
+          HTMLEOF
 
       - name: Package Electron app
         run: |
