@@ -11,7 +11,10 @@ export type PetKind =
   | "isaac"
   // Sci-fi / Horror
   | "facehugger" | "xenomorph" | "dalek" | "tribble" | "bb8"
-  | "weepingAngel" | "gremlin" | "chestburster" | "yautja";
+  | "weepingAngel" | "gremlin" | "chestburster" | "yautja"
+  // New batch 2
+  | "mario" | "sonic" | "amongUs" | "totoro" | "jigglypuff"
+  | "doge" | "nyanCat" | "bear" | "turtle" | "owl";
 
 export type PetDef = {
   kind: PetKind;
@@ -1133,6 +1136,227 @@ function YautjaSprite({ facing, step }: { facing: "left" | "right"; step: number
   );
 }
 
+// ---------- New batch 2 ----------
+
+function MarioSprite({ facing, step }: { facing: "left" | "right"; step: number }) {
+  const legY = step % 2 === 0 ? 0 : -1;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: flip(facing), imageRendering: "pixelated" }}>
+      <rect x="10" y="4" width="12" height="4" fill="#ff0000" />
+      <rect x="8" y="4" width="16" height="2" fill="#ff0000" />
+      <rect x="9" y="8" width="14" height="8" rx="2" fill="#ffb68a" />
+      <rect x="10" y="6" width="12" height="4" fill="#ff0000" />
+      <rect x="8" y="8" width="3" height="3" fill="#4a2a0a" />
+      <circle cx="13" cy="11" r="1.2" fill="#1a1a2e" />
+      <circle cx="18" cy="11" r="1.2" fill="#1a1a2e" />
+      <ellipse cx="16" cy="14" rx="1.5" ry="0.8" fill="#ffb68a" />
+      <rect x="8" y="16" width="16" height="8" rx="2" fill="#0050d0" />
+      <rect x="12" y="16" width="8" height="3" fill="#ff0000" />
+      <circle cx="16" cy="18" r="1" fill="#ffd700" />
+      <rect x={9 + legY} y="24" width="4" height="5" fill="#4a2a0a" />
+      <rect x={19 - legY} y="24" width="4" height="5" fill="#4a2a0a" />
+    </svg>
+  );
+}
+
+function SonicSprite({ facing, step }: { facing: "left" | "right"; step: number }) {
+  const legY = step % 2 === 0 ? 0 : -1;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: flip(facing), imageRendering: "pixelated" }}>
+      <path d="M20 4 Q28 2 26 8 Q24 6 22 8" fill="#1a5aff" />
+      <path d="M22 2 Q30 0 28 6" fill="#1a5aff" />
+      <path d="M18 6 Q24 4 24 10" fill="#1a5aff" />
+      <ellipse cx="14" cy="12" rx="8" ry="7" fill="#1a5aff" />
+      <ellipse cx="12" cy="13" rx="4" ry="4" fill="#ffcc88" />
+      <circle cx="11" cy="11" r="1.8" fill="#fff" />
+      <circle cx="15" cy="11" r="1.8" fill="#fff" />
+      <circle cx="11.5" cy="11" r="0.9" fill="#1a1a2e" />
+      <circle cx="15.5" cy="11" r="0.9" fill="#1a1a2e" />
+      <ellipse cx="13" cy="15" rx="1" ry="0.5" fill="#1a1a2e" />
+      <ellipse cx="14" cy="20" rx="6" ry="5" fill="#1a5aff" />
+      <rect x={9 + legY} y="24" width="3" height="4" fill="#ff2222" />
+      <rect x={16 - legY} y="24" width="3" height="4" fill="#ff2222" />
+      <rect x={9 + legY} y="27" width="4" height="2" fill="#fff" />
+      <rect x={16 - legY} y="27" width="4" height="2" fill="#fff" />
+    </svg>
+  );
+}
+
+function AmongUsSprite({ facing, step }: { facing: "left" | "right"; step: number }) {
+  const legY = step % 2 === 0 ? 0 : -2;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: flip(facing), imageRendering: "pixelated" }}>
+      <path d="M10 8 Q10 2 18 2 Q26 2 26 8 L26 24 Q26 28 22 28 L20 28 L20 24 L16 24 L16 28 L14 28 Q10 28 10 24 Z" fill="#ff2222" />
+      <rect x="6" y="12" width="6" height="10" rx="3" fill="#cc1a1a" />
+      <rect x="14" y="6" width="10" height="8" rx="2" fill="#8ad4ff" opacity="0.9" />
+      <rect x="15" y="7" width="8" height="6" rx="1" fill="#c8eeff" />
+      <rect x={12 + legY} y="26" width="4" height="4" rx="1" fill="#ff2222" />
+      <rect x={20 - legY} y="26" width="4" height="4" rx="1" fill="#ff2222" />
+    </svg>
+  );
+}
+
+function TotoroSprite({ facing, step }: { facing: "left" | "right"; step: number }) {
+  const bob = step % 2 === 0 ? 0 : -1;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: `${flip(facing)} translateY(${bob}px)`, imageRendering: "pixelated" }}>
+      <ellipse cx="16" cy="18" rx="11" ry="12" fill="#7a8a7a" />
+      <ellipse cx="16" cy="20" rx="8" ry="9" fill="#d8d0b8" />
+      <polygon points="10,4 12,10 8,10" fill="#7a8a7a" />
+      <polygon points="22,4 20,10 24,10" fill="#7a8a7a" />
+      <circle cx="12" cy="12" r="2.5" fill="#fff" />
+      <circle cx="20" cy="12" r="2.5" fill="#fff" />
+      <circle cx="12.5" cy="12" r="1.2" fill="#1a1a2e" />
+      <circle cx="20.5" cy="12" r="1.2" fill="#1a1a2e" />
+      <ellipse cx="16" cy="16" rx="1.5" ry="0.8" fill="#1a1a2e" />
+      <path d="M10 17 Q16 22 22 17" stroke="#1a1a2e" strokeWidth="0.8" fill="none" />
+      <line x1="10" y1="20" x2="22" y2="20" stroke="#7a8a7a" strokeWidth="0.6" />
+      <line x1="11" y1="22" x2="21" y2="22" stroke="#7a8a7a" strokeWidth="0.6" />
+      <line x1="12" y1="24" x2="20" y2="24" stroke="#7a8a7a" strokeWidth="0.6" />
+    </svg>
+  );
+}
+
+function JigglypuffSprite({ step }: { facing: "left" | "right"; step: number }) {
+  const bob = step % 2 === 0 ? 0 : -2;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: `translateY(${bob}px)`, imageRendering: "pixelated" }}>
+      <circle cx="16" cy="16" r="12" fill="#ffaacc" />
+      <circle cx="16" cy="16" r="10" fill="#ffbbdd" />
+      <ellipse cx="16" cy="4" rx="4" ry="3" fill="#ffaacc" />
+      <circle cx="12" cy="14" r="2.5" fill="#fff" />
+      <circle cx="20" cy="14" r="2.5" fill="#fff" />
+      <circle cx="12.5" cy="14" r="1.2" fill="#33bbaa" />
+      <circle cx="20.5" cy="14" r="1.2" fill="#33bbaa" />
+      <circle cx="12.5" cy="13.5" r="0.4" fill="#fff" />
+      <circle cx="20.5" cy="13.5" r="0.4" fill="#fff" />
+      <ellipse cx="16" cy="19" rx="1.5" ry="1" fill="#ff5577" />
+      <ellipse cx="8" cy="18" rx="2" ry="1.2" fill="#ff88aa" opacity="0.5" />
+      <ellipse cx="24" cy="18" rx="2" ry="1.2" fill="#ff88aa" opacity="0.5" />
+      <rect x="6" y="22" width="4" height="4" rx="2" fill="#ffaacc" />
+      <rect x="22" y="22" width="4" height="4" rx="2" fill="#ffaacc" />
+    </svg>
+  );
+}
+
+function DogeSprite({ facing, step }: { facing: "left" | "right"; step: number }) {
+  const legY = step % 2 === 0 ? 0 : -1;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: flip(facing), imageRendering: "pixelated" }}>
+      <ellipse cx="16" cy="19" rx="10" ry="7" fill="#e8c870" />
+      <ellipse cx="16" cy="20" rx="7" ry="5" fill="#f0d888" />
+      <ellipse cx="12" cy="11" rx="7" ry="7" fill="#e8c870" />
+      <path d="M6 6 Q8 2 10 6" fill="#c8a850" />
+      <path d="M16 4 Q18 0 20 4" fill="#c8a850" />
+      <circle cx="10" cy="10" r="1.5" fill="#1a1a2e" />
+      <circle cx="15" cy="10" r="1.5" fill="#1a1a2e" />
+      <circle cx="10" cy="9.5" r="0.5" fill="#fff" />
+      <circle cx="15" cy="9.5" r="0.5" fill="#fff" />
+      <ellipse cx="12" cy="13" rx="1.5" ry="1" fill="#1a1a2e" />
+      <path d="M10 15 Q12 17 14 15" stroke="#1a1a2e" strokeWidth="0.8" fill="none" />
+      <rect x={8 + legY} y="24" width="3" height="4" fill="#c8a850" />
+      <rect x={13 - legY} y="24" width="3" height="4" fill="#c8a850" />
+      <rect x={18 + legY} y="24" width="3" height="4" fill="#c8a850" />
+      <rect x={22 - legY} y="24" width="3" height="4" fill="#c8a850" />
+      <path d="M26 17 Q30 15 28 20 Q26 18 26 17" fill="#e8c870" />
+    </svg>
+  );
+}
+
+function NyanCatSprite({ facing, step }: { facing: "left" | "right"; step: number }) {
+  const wave = step % 2 === 0 ? 0 : 1;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: flip(facing), imageRendering: "pixelated" }}>
+      <rect x="8" y="10" width="18" height="12" rx="2" fill="#ff88aa" />
+      <rect x="9" y="11" width="16" height="10" fill="#ff99bb" />
+      <circle cx="12" cy="14" r="0.8" fill="#ff5577" />
+      <circle cx="16" cy="16" r="0.8" fill="#ff5577" />
+      <circle cx="20" cy="13" r="0.8" fill="#ff5577" />
+      <rect x="4" y="12" width="6" height="10" rx="2" fill="#888" />
+      <circle cx="6" cy="15" r="1" fill="#1a1a2e" />
+      <circle cx="9" cy="15" r="1" fill="#1a1a2e" />
+      <ellipse cx="7" cy="18" rx="1" ry="0.5" fill="#ffaaaa" />
+      <path d="M5 19 Q7 20 9 19" stroke="#1a1a2e" strokeWidth="0.6" fill="none" />
+      <rect x={8 + wave} y="22" width="2" height="3" fill="#888" />
+      <rect x={14 - wave} y="22" width="2" height="3" fill="#888" />
+      <rect x={20 + wave} y="22" width="2" height="3" fill="#888" />
+      <rect x="26" y="14" width="4" height="2" fill="#888" />
+      {[0,1,2,3,4,5].map(i => (
+        <rect key={i} x={0} y={10 + i * 2} width="8" height="2" fill={["#ff0000","#ff8800","#ffff00","#00ff00","#0088ff","#8800ff"][i]} opacity="0.7" />
+      ))}
+    </svg>
+  );
+}
+
+function BearSprite({ facing, step }: { facing: "left" | "right"; step: number }) {
+  const legY = step % 2 === 0 ? 0 : -1;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: flip(facing), imageRendering: "pixelated" }}>
+      <ellipse cx="16" cy="19" rx="10" ry="8" fill="#8B5A2B" />
+      <ellipse cx="16" cy="21" rx="7" ry="5" fill="#a87040" />
+      <ellipse cx="16" cy="11" rx="8" ry="7" fill="#8B5A2B" />
+      <circle cx="10" cy="6" r="3" fill="#8B5A2B" />
+      <circle cx="22" cy="6" r="3" fill="#8B5A2B" />
+      <circle cx="10" cy="6" r="1.5" fill="#a87040" />
+      <circle cx="22" cy="6" r="1.5" fill="#a87040" />
+      <circle cx="13" cy="11" r="1.5" fill="#1a1a2e" />
+      <circle cx="19" cy="11" r="1.5" fill="#1a1a2e" />
+      <circle cx="13" cy="10.5" r="0.5" fill="#fff" />
+      <circle cx="19" cy="10.5" r="0.5" fill="#fff" />
+      <ellipse cx="16" cy="14" rx="1.5" ry="1" fill="#1a1a2e" />
+      <path d="M14 16 Q16 18 18 16" stroke="#1a1a2e" strokeWidth="0.8" fill="none" />
+      <rect x={9 + legY} y="25" width="4" height="4" fill="#6e4520" />
+      <rect x={19 - legY} y="25" width="4" height="4" fill="#6e4520" />
+    </svg>
+  );
+}
+
+function TurtleSprite({ facing, step }: { facing: "left" | "right"; step: number }) {
+  const legY = step % 2 === 0 ? 0 : -1;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: flip(facing), imageRendering: "pixelated" }}>
+      <ellipse cx="16" cy="18" rx="11" ry="7" fill="#2a8a2a" />
+      <ellipse cx="16" cy="17" rx="9" ry="6" fill="#3aaa3a" />
+      <path d="M10 14 L16 12 L22 14 L20 18 L12 18 Z" fill="#2a7a2a" />
+      <line x1="16" y1="12" x2="16" y2="18" stroke="#1a5a1a" strokeWidth="0.6" />
+      <line x1="12" y1="16" x2="20" y2="16" stroke="#1a5a1a" strokeWidth="0.6" />
+      <ellipse cx="7" cy="14" rx="4" ry="3" fill="#88c870" />
+      <circle cx="5" cy="13" r="1" fill="#1a1a2e" />
+      <circle cx="5" cy="12.5" r="0.3" fill="#fff" />
+      <path d="M4 15 Q5 16 6 15" stroke="#1a1a2e" strokeWidth="0.6" fill="none" />
+      <rect x={8 + legY} y="23" width="3" height="3" fill="#88c870" />
+      <rect x={14 - legY} y="23" width="3" height="3" fill="#88c870" />
+      <rect x={19 + legY} y="23" width="3" height="3" fill="#88c870" />
+      <rect x={24 - legY} y="23" width="3" height="3" fill="#88c870" />
+      <path d="M26 18 Q30 18 28 20" fill="#88c870" />
+    </svg>
+  );
+}
+
+function OwlSprite({ facing, step }: { facing: "left" | "right"; step: number }) {
+  const blink = step % 4 === 0;
+  const bob = step % 2 === 0 ? 0 : -1;
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: `${flip(facing)} translateY(${bob}px)`, imageRendering: "pixelated" }}>
+      <ellipse cx="16" cy="18" rx="9" ry="10" fill="#8B6A3E" />
+      <ellipse cx="16" cy="20" rx="6" ry="7" fill="#c8a870" />
+      <polygon points="10,6 12,12 8,12" fill="#8B6A3E" />
+      <polygon points="22,6 20,12 24,12" fill="#8B6A3E" />
+      <circle cx="12" cy="14" r="3" fill="#fff" />
+      <circle cx="20" cy="14" r="3" fill="#fff" />
+      <circle cx="12" cy="14" r={blink ? 0.2 : 1.5} fill="#ff8800" />
+      <circle cx="20" cy="14" r={blink ? 0.2 : 1.5} fill="#ff8800" />
+      <circle cx="12" cy="13.5" r={blink ? 0 : 0.5} fill="#1a1a2e" />
+      <circle cx="20" cy="13.5" r={blink ? 0 : 0.5} fill="#1a1a2e" />
+      <polygon points="15,17 17,17 16,19" fill="#ff8800" />
+      <path d="M8 22 Q10 26 12 22" fill="#8B6A3E" />
+      <path d="M20 22 Q22 26 24 22" fill="#8B6A3E" />
+      <rect x="12" y="28" width="3" height="2" fill="#ff8800" />
+      <rect x="17" y="28" width="3" height="2" fill="#ff8800" />
+    </svg>
+  );
+}
+
 // ---------- Registry ----------
 
 export const PETS: Record<PetKind, PetDef> = {
@@ -1180,6 +1404,17 @@ export const PETS: Record<PetKind, PetDef> = {
   gremlin:       { kind: "gremlin",       name: "Mogwai",  style: "Gremlins",        size: 64, render: (f, s) => <GremlinSprite facing={f} step={s} /> },
   chestburster:  { kind: "chestburster",  name: "Burst",   style: "Alien larva",     size: 60, render: (f, s) => <ChestbursterSprite facing={f} step={s} /> },
   yautja:        { kind: "yautja",        name: "Predator",style: "The Predator",    size: 68, render: (f, s) => <YautjaSprite facing={f} step={s} /> },
+  // New batch 2
+  mario:         { kind: "mario",         name: "Mario",   style: "Super Mario",     size: 64, render: (f, s) => <MarioSprite facing={f} step={s} /> },
+  sonic:         { kind: "sonic",         name: "Sonic",   style: "Gotta go fast",   size: 64, render: (f, s) => <SonicSprite facing={f} step={s} /> },
+  amongUs:       { kind: "amongUs",       name: "Crew",    style: "Among Us sus",    size: 62, render: (f, s) => <AmongUsSprite facing={f} step={s} /> },
+  totoro:        { kind: "totoro",        name: "Totoro",  style: "Studio Ghibli",   size: 66, render: (f, s) => <TotoroSprite facing={f} step={s} /> },
+  jigglypuff:    { kind: "jigglypuff",    name: "Jiggly",  style: "Pokémon singer",  size: 60, render: (f, s) => <JigglypuffSprite facing={f} step={s} /> },
+  doge:          { kind: "doge",          name: "Doge",    style: "Much wow",        size: 66, render: (f, s) => <DogeSprite facing={f} step={s} /> },
+  nyanCat:       { kind: "nyanCat",       name: "Nyan",    style: "Rainbow cat",     size: 64, render: (f, s) => <NyanCatSprite facing={f} step={s} /> },
+  bear:          { kind: "bear",          name: "Teddy",   style: "Forest bear",     size: 64, render: (f, s) => <BearSprite facing={f} step={s} /> },
+  turtle:        { kind: "turtle",        name: "Shell",   style: "Slow & steady",   size: 66, render: (f, s) => <TurtleSprite facing={f} step={s} /> },
+  owl:           { kind: "owl",           name: "Hoot",    style: "Night watcher",   size: 62, render: (f, s) => <OwlSprite facing={f} step={s} /> },
 };
 
 export const PET_LIST: PetKind[] = [
@@ -1198,5 +1433,8 @@ export const PET_LIST: PetKind[] = [
   // Sci-fi / horror
   "yurei", "alien", "facehugger", "xenomorph", "chestburster",
   "dalek", "tribble", "bb8", "weepingAngel", "gremlin", "yautja",
+  // New batch 2
+  "mario", "sonic", "amongUs", "totoro", "jigglypuff",
+  "doge", "nyanCat", "bear", "turtle", "owl",
 ];
 

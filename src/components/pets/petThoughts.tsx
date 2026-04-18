@@ -74,6 +74,17 @@ const THOUGHTS: Partial<Record<PetKind, string[]>> = {
   gremlin: ["jeje jeje 😈", "no me mojes", "no luz brillante", "no comer después de medianoche", "🎵 caos 🎵"],
   chestburster: ["¡SORPRESA! 💥", "saliendo del huevo", "ñam ñam costillas", "screech!", "hello world"],
   yautja: ["soy cazador", "hot trofeo", "blade ready ⚔", "mira mi cráneo collection", "honor o muerte"],
+  // New batch 2
+  mario: ["it's-a me! 🍄", "mamma mia!", "let's-a go!", "necesito monedas", "princesa? ¿dónde?"],
+  sonic: ["gotta go fast! 💨", "too slow!", "anillos anillos", "soy azul y veloz", "¿Eggman otra vez?"],
+  amongUs: ["sus 👀", "yo estaba en electrical", "no fui yo", "voto rojo", "emergency meeting!"],
+  totoro: ["...", "lluvia bonita ☔", "catbus viene", "semillas mágicas 🌱", "soy grande y suave"],
+  jigglypuff: ["jiggly~ 🎤", "¡no te duermas!", "puff puff", "mi canción es la mejor", "marcador listo ✏️"],
+  doge: ["much wow", "very pixel", "so desktop", "many walk", "wow such pet 🐕"],
+  nyanCat: ["nyan nyan nyan 🌈", "pop tart body", "rainbow trail", "meow forever", "8-bit life"],
+  bear: ["grrrr suave", "miel miel 🍯", "abrazo de oso", "soy peludo", "hibernar..."],
+  turtle: ["slow and steady 🐢", "mi casa va conmigo", "no hay prisa", "shell power", "lechuga pls"],
+  owl: ["hoo hoo 🦉", "soy sabio", "veo todo de noche", "giro la cabeza 270°", "ratón detectado"],
 };
 
 /** Pick a random idle thought for a pet kind. */
