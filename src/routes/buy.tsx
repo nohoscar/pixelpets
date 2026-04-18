@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { PetShowcase } from "@/components/PetShowcase";
+import { I18nProvider, useI18n } from "@/lib/i18n";
+import { useGameState } from "@/hooks/useGameState";
 
 export const Route = createFileRoute("/buy")({
   component: BuyPage,
@@ -34,11 +36,21 @@ const COMPARISON = [
 ];
 
 function BuyPage() {
+  const gameState = useGameState();
+  return (
+    <I18nProvider initialLocale={gameState.locale}>
+      <BuyPageContent />
+    </I18nProvider>
+  );
+}
+
+function BuyPageContent() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
-
   const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
+  const [isMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +73,21 @@ function BuyPage() {
   };
 
   return (
-    <main className="relative min-h-screen w-full">
+    <main className="relative min-h-screen w-full overflow-x-hidden">
       <SiteHeader />
+
+      {/* Mobile banner (Task 14.3) */}
+      {isMobile && (
+        <div className="mx-4 mt-4 p-4 rounded-lg glass border border-neon-pink/40 text-center">
+          <p className="font-display text-[10px] text-neon-pink mb-2">{t("buy.mobile.banner")}</p>
+          <Link
+            to="/"
+            className="inline-block px-5 py-3 rounded-md bg-primary text-primary-foreground font-display text-[10px] hover:shadow-[0_0_24px_var(--primary)] transition-all min-h-[44px]"
+          >
+            {t("buy.mobile.demo")}
+          </Link>
+        </div>
+      )}
 
       {/* HERO */}
       <section className="max-w-6xl mx-auto px-4 md:px-6 pt-8 md:pt-12 pb-6">
@@ -260,15 +285,15 @@ function BuyPage() {
       {/* MOBILE STICKY CTA */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md bg-background/90 border-t border-border p-3 flex items-center justify-between gap-3">
         <div>
-          <p className="font-display text-[9px] text-muted-foreground">PIXELPETS DESKTOP</p>
+          <p className="font-display text-[9px] text-muted-foreground">{t("buy.mobile.sticky.label")}</p>
           <p className="font-display text-base text-neon-pink">$4.99 USD</p>
         </div>
         <a
           href="#top"
           onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-          className="px-5 py-2.5 rounded-md bg-primary text-primary-foreground font-display text-[10px]"
+          className="px-5 py-2.5 rounded-md bg-primary text-primary-foreground font-display text-[10px] min-h-[44px] flex items-center"
         >
-          ▸ COMPRAR
+          {t("buy.mobile.sticky.button")}
         </a>
       </div>
     </main>

@@ -1,13 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { PETS, type PetKind } from "./petSprites";
 import { randomThought, moodThought } from "./petThoughts";
 import { playSound } from "@/lib/audio";
 import type { SystemAwareness } from "@/hooks/useSystemAwareness";
+import type { GameState } from "@/hooks/useGameState";
+import { AccessoryRenderer } from "./AccessoryRenderer";
+import { ParticleSystem, type ParticleConfig } from "./ParticleSystem";
 
 export type PetStats = {
   hunger: number;    // 0 (hambriento) → 100 (lleno)
   happiness: number; // 0 (triste) → 100 (feliz)
   energy: number;    // 0 (cansado) → 100 (lleno de energía)
+  xp: number;
+  level: number;
 };
 
 type PetState = "walk" | "idle" | "jump" | "drag" | "sleep" | "faint";
@@ -20,21 +25,24 @@ interface PetProps {
   cursorRef: React.MutableRefObject<{ x: number; y: number } | null>;
   followCursor: boolean;
   onRemove: (id: string) => void;
-  /** Optional: lift state up so the parent can show stat bars */
   onStatsChange?: (stats: PetStats) => void;
-  /** Imperative actions: parent gets a function to call */
   actionRef?: React.MutableRefObject<{
     feed: () => void;
     play: () => void;
     sleep: () => void;
   } | null>;
-  /** System signals: battery, idle, time of day */
   awareness?: SystemAwareness;
+  gameState?: GameState;
+  paused?: boolean;
+  onPositionChange?: (pos: { x: number; y: number }) => void;
+  onPetClick?: () => void;
+  speakRef?: { current: ((msg: string) => void) | null };
 }
 
 export function Pet({
   id, kind, initialX, initialY, cursorRef, followCursor, onRemove,
-  onStatsChange, actionRef, awareness,
+  onStatsChange, actionRef, awareness, gameState, paused, onPositionChange, onPetClick,
+  speakRef,
 }: PetProps) {
   const def = PETS[kind];
   const size = def.size;
@@ -47,7 +55,10 @@ export function Pet({
   const [state, setState] = useState<PetState>("walk");
   const [step, setStep] = useState(0);
   const [bubble, setBubble] = useState<string | null>(null);
-  const [stats, setStats] = useState<PetStats>({ hunger: 80, happiness: 80, energy: 80 });
+  const [stats, setStats] = useState<PetStats>({ hunger: 80, happiness: 80, energy: 80, xp: gameState?.xp ?? 0, level: gameState?.level ?? 1 });
+
+  const [particles, setParticles] = useState<ParticleConfig[]>([]);
+  const lastLevelRef = useRef(gameState?.level ?? 1);
 
   const targetRef = useRef<{ x: number; y: number } | null>(null);
   const stateRef = useRef<PetState>("walk");
@@ -59,11 +70,15 @@ export function Pet({
   // Notify parent when stats change
   useEffect(() => { onStatsChange?.(stats); }, [stats, onStatsChange]);
 
+  // Notify parent of position changes for interaction detection
+  useEffect(() => { onPositionChange?.(pos); }, [pos, onPositionChange]);
+
   // Decay stats over time (every 6s)
   useEffect(() => {
     const id = setInterval(() => {
       setStats((s) => {
-        const next = {
+        const next: PetStats = {
+          ...s,
           hunger: Math.max(0, s.hunger - 2),
           happiness: Math.max(0, s.happiness - 1.5),
           energy: stateRef.current === "sleep"
@@ -108,7 +123,7 @@ export function Pet({
     let raf = 0;
     const tick = () => {
       const st = stateRef.current;
-      if (st === "drag" || st === "sleep" || st === "idle" || st === "faint") {
+      if (st === "drag" || st === "sleep" || st === "idle" || st === "faint" || paused) {
         raf = requestAnimationFrame(tick);
         return;
       }
@@ -133,7 +148,7 @@ export function Pet({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [cursorRef, followCursor, size, stats.energy]);
+  }, [cursorRef, followCursor, size, stats.energy, paused]);
 
   // Drag handling: window-level so cursor leaving the pet doesn't break it
   useEffect(() => {
@@ -160,6 +175,48 @@ export function Pet({
     setBubble(msg);
     setTimeout(() => setBubble(null), ms);
   };
+
+  // Expose speak to parent for interaction triggers
+  useEffect(() => {
+    if (speakRef) speakRef.current = (msg: string) => {
+      speak(msg);
+      // Also boost happiness by 3 for pet interactions
+      setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 3) }));
+    };
+    return () => { if (speakRef) speakRef.current = null; };
+  });
+
+  // Particle emitter helper
+  const emitParticles = useCallback((type: ParticleConfig["type"]) => {
+    const configs: Record<ParticleConfig["type"], Omit<ParticleConfig, "origin">> = {
+      stars: { type: "stars", count: 8, duration: 400 },
+      food: { type: "food", count: 5, duration: 500 },
+      confetti: { type: "confetti", count: 14, duration: 800 },
+    };
+    const cfg = configs[type];
+    const p: ParticleConfig = { ...cfg, origin: { x: size / 2, y: size / 2 } };
+    setParticles((prev) => [...prev, p]);
+    setTimeout(() => {
+      setParticles((prev) => prev.slice(1));
+    }, cfg.duration + 100);
+  }, [size]);
+
+  // Level-up detection
+  useEffect(() => {
+    if (!gameState) return;
+    const currentLevel = gameState.level;
+    if (currentLevel > lastLevelRef.current) {
+      // Level up!
+      setState("jump");
+      playSound("happy");
+      speak(`Level ${currentLevel}!`, 2500);
+      emitParticles("confetti");
+      setTimeout(() => setState("walk"), 500);
+    }
+    lastLevelRef.current = currentLevel;
+    // Sync xp/level into stats for display
+    setStats((s) => ({ ...s, xp: gameState.xp, level: gameState.level }));
+  }, [gameState?.xp, gameState?.level, emitParticles]);
 
   // Idle thoughts: every ~14-26s pick a random thought (themed or mood-based).
   // Skipped while sleeping/fainted/dragging to not be annoying.
@@ -196,13 +253,23 @@ export function Pet({
         setStats((s) => ({ ...s, hunger: Math.min(100, s.hunger + 35) }));
         playSound("eat");
         speak("¡ñam!");
+        emitParticles("food");
+        if (gameState) {
+          gameState.addXp(5);
+          gameState.incrementFeedCount();
+        }
       },
       play: () => {
         setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 35), energy: Math.max(0, s.energy - 10) }));
         playSound("happy");
         speak("¡yay!");
         setState("jump");
+        emitParticles("stars");
         setTimeout(() => setState("walk"), 500);
+        if (gameState) {
+          gameState.addXp(8);
+          gameState.incrementPlayCount();
+        }
       },
       sleep: () => {
         if (stateRef.current === "sleep") {
@@ -215,7 +282,7 @@ export function Pet({
         }
       },
     };
-  }, [actionRef]);
+  }, [actionRef, gameState, emitParticles]);
 
   // System awareness reactions
   const lastReactionRef = useRef<{
@@ -357,13 +424,131 @@ export function Pet({
     // distinguish click vs drag: if barely moved, treat as click
     if (state === "drag") return;
     e.stopPropagation();
+    onPetClick?.();
     const phrases = ["¡Hola!", "♥", "*nya*", "play?", "boop!", "✨"];
     speak(phrases[Math.floor(Math.random() * phrases.length)]);
     setState("jump");
+    emitParticles("stars");
     setTimeout(() => setState("walk"), 500);
     setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 5) }));
     playSound("pop");
+    if (gameState) {
+      gameState.addXp(2);
+      gameState.incrementClickCount();
+    }
   };
+
+  // Touch interaction handlers (Task 14.2)
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTapRef = useRef<number>(0);
+  const touchDraggingRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+    touchDraggingRef.current = false;
+
+    // Double-tap detection
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      // Double-tap → remove pet
+      lastTapRef.current = 0;
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      onRemove(id);
+      return;
+    }
+    lastTapRef.current = now;
+
+    // Long-press timer (500ms) → enter drag
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTimerRef.current = null;
+      touchDraggingRef.current = true;
+      dragOffsetRef.current = {
+        dx: touch.clientX - posRef.current.x,
+        dy: touch.clientY - posRef.current.y,
+      };
+      setState("drag");
+      playSound("click");
+    }, 500);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const start = touchStartRef.current;
+
+    // Cancel long-press if moved > 10px
+    if (start && longPressTimerRef.current) {
+      const dist = Math.hypot(touch.clientX - start.x, touch.clientY - start.y);
+      if (dist > 10) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    }
+
+    // If dragging, follow touch
+    if (touchDraggingRef.current && dragOffsetRef.current) {
+      e.preventDefault();
+      setPos({
+        x: touch.clientX - dragOffsetRef.current.dx,
+        y: touch.clientY - dragOffsetRef.current.dy,
+      });
+    }
+  };
+
+  const handleTouchEnd = (_e: React.TouchEvent) => {
+    // Clear long-press timer
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    if (touchDraggingRef.current) {
+      // End drag
+      touchDraggingRef.current = false;
+      setState("walk");
+      dragOffsetRef.current = null;
+      playSound("pop");
+    } else {
+      // Tap → same as click
+      onPetClick?.();
+      const phrases = ["¡Hola!", "♥", "*nya*", "play?", "boop!", "✨"];
+      speak(phrases[Math.floor(Math.random() * phrases.length)]);
+      setState("jump");
+      emitParticles("stars");
+      setTimeout(() => setState("walk"), 500);
+      setStats((s) => ({ ...s, happiness: Math.min(100, s.happiness + 5) }));
+      playSound("pop");
+      if (gameState) {
+        gameState.addXp(2);
+        gameState.incrementClickCount();
+      }
+    }
+
+    touchStartRef.current = null;
+  };
+
+  // Night Mode: auto-equip pajamas (task 3.3)
+  const nightModeAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!awareness || !gameState) return;
+    const isNight = awareness.timeOfDay === "night";
+
+    if (isNight && !nightModeAppliedRef.current && !gameState.nightModeManualOverride) {
+      nightModeAppliedRef.current = true;
+      gameState.equipAccessory("special", "pajamas");
+      speak("zzz... pijama time", 2000);
+    } else if (!isNight && nightModeAppliedRef.current) {
+      nightModeAppliedRef.current = false;
+      // Only unequip if pajamas are currently in special slot
+      if (gameState.accessories.special === "pajamas") {
+        gameState.equipAccessory("special", null);
+      }
+    }
+  }, [awareness?.timeOfDay, gameState]);
 
   // Need icons over the pet
   const needIcons: { icon: string; label: string }[] = [];
@@ -393,9 +578,13 @@ export function Pet({
           : isFainted ? "rotate(90deg)" : undefined,
         opacity: isFainted ? 0.55 : 1,
         filter: isFainted ? "grayscale(0.6) brightness(0.8)" : undefined,
+        touchAction: "none",
       }}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       onContextMenu={(e) => {
         e.preventDefault();
         onRemove(id);
@@ -430,6 +619,17 @@ export function Pet({
       <div className={state === "idle" || state === "sleep" ? "animate-bob w-full h-full" : "w-full h-full"}>
         {def.render(facing, step)}
       </div>
+      {/* Accessory overlay (task 2.8) */}
+      {gameState && (
+        <AccessoryRenderer
+          equipped={gameState.accessories}
+          facing={facing}
+          petSize={size}
+          petState={state}
+        />
+      )}
+      {/* Particle effects (task 3.2) */}
+      <ParticleSystem particles={particles} />
       <div
         className="absolute left-1/2 -translate-x-1/2 rounded-full bg-black/40 blur-sm"
         style={{ bottom: -4, width: size * 0.6, height: 6 }}

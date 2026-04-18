@@ -1,5 +1,7 @@
 import type { PetStats } from "./pets/Pet";
 import type { SystemAwareness } from "@/hooks/useSystemAwareness";
+import type { GameState } from "@/hooks/useGameState";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   stats: PetStats | null;
@@ -8,6 +10,7 @@ interface Props {
   onFeed: () => void;
   onPlay: () => void;
   onSleep: () => void;
+  gameState?: GameState;
 }
 
 function Bar({ label, value, color }: { label: string; value: number; color: string }) {
@@ -31,32 +34,67 @@ function Bar({ label, value, color }: { label: string; value: number; color: str
   );
 }
 
-const TOD_LABEL: Record<string, { icon: string; text: string }> = {
-  morning: { icon: "🌅", text: "MAÑANA" },
-  day:     { icon: "☀️", text: "DÍA" },
-  evening: { icon: "🌆", text: "TARDE" },
-  night:   { icon: "🌙", text: "NOCHE" },
-};
-
-export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep }: Props) {
+export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep, gameState }: Props) {
   if (!stats) return null;
+  const { t } = useI18n();
   const battPct = awareness?.batteryLevel != null ? Math.round(awareness.batteryLevel * 100) : null;
+
+  const TOD_LABEL: Record<string, { icon: string; text: string }> = {
+    morning: { icon: "🌅", text: t("stats.morning") },
+    day:     { icon: "☀️", text: t("stats.day") },
+    evening: { icon: "🌆", text: t("stats.evening") },
+    night:   { icon: "🌙", text: t("stats.night") },
+  };
+
   const tod = awareness ? TOD_LABEL[awareness.timeOfDay] : null;
+
+  // XP progress calculation
+  const currentLevel = gameState?.level ?? 1;
+  const currentXp = gameState?.xp ?? 0;
+  // Threshold for current level: (level-1)^2 * 100
+  const currentLevelThreshold = (currentLevel - 1) * (currentLevel - 1) * 100;
+  const nextLevelThreshold = currentLevel * currentLevel * 100;
+  const xpInLevel = currentXp - currentLevelThreshold;
+  const xpNeeded = nextLevelThreshold - currentLevelThreshold;
+  const xpProgress = xpNeeded > 0 ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100;
 
   return (
     <section className="glass rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-display text-[10px] text-neon-pink">{petName.toUpperCase()} · STATS</h2>
+        <h2 className="font-display text-[10px] text-neon-pink">{petName.toUpperCase()} · {t("stats.title")}</h2>
       </div>
       <div className="space-y-3 mb-4">
-        <Bar label="HAMBRE" value={stats.hunger} color="hsl(20 90% 60%)" />
-        <Bar label="FELICIDAD" value={stats.happiness} color="hsl(330 80% 65%)" />
-        <Bar label="ENERGÍA" value={stats.energy} color="hsl(150 80% 55%)" />
+        <Bar label={t("stats.hunger")} value={stats.hunger} color="hsl(20 90% 60%)" />
+        <Bar label={t("stats.happiness")} value={stats.happiness} color="hsl(330 80% 65%)" />
+        <Bar label={t("stats.energy")} value={stats.energy} color="hsl(150 80% 55%)" />
       </div>
+
+      {/* XP / Level display */}
+      {gameState && (
+        <div className="mb-4 pt-3 border-t border-border/50">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] font-display text-neon">{t("stats.level")} {currentLevel}</span>
+            <span className="text-[9px] font-display text-muted-foreground">{currentXp} XP</span>
+          </div>
+          <div className="h-2 bg-secondary/60 rounded-full overflow-hidden">
+            <div
+              className="h-full transition-all duration-500 rounded-full"
+              style={{
+                width: `${xpProgress}%`,
+                background: "hsl(270 80% 65%)",
+                boxShadow: "0 0 10px hsl(270 80% 65%)",
+              }}
+            />
+          </div>
+          <p className="text-[8px] text-muted-foreground mt-1 text-right">
+            {xpInLevel}/{xpNeeded} → {t("stats.level")} {currentLevel + 1}
+          </p>
+        </div>
+      )}
 
       {awareness && (
         <div className="mb-4 pt-3 border-t border-border/50">
-          <p className="font-display text-[9px] text-neon mb-2">SISTEMA</p>
+          <p className="font-display text-[9px] text-neon mb-2">{t("stats.system")}</p>
           <div className="grid grid-cols-3 gap-2 text-[9px] font-display">
             <div
               className="flex flex-col items-center gap-0.5 p-1.5 rounded-md bg-secondary/30"
@@ -98,24 +136,24 @@ export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep 
       <div className="grid grid-cols-3 gap-2">
         <button
           onClick={onFeed}
-          className="px-2 py-2 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-0.5"
+          className="px-2 py-2 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-0.5 min-h-[44px] min-w-[44px]"
         >
           <span className="text-base">🍖</span>
-          <span>FEED</span>
+          <span>{t("stats.feed")}</span>
         </button>
         <button
           onClick={onPlay}
-          className="px-2 py-2 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-0.5"
+          className="px-2 py-2 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-0.5 min-h-[44px] min-w-[44px]"
         >
           <span className="text-base">🎾</span>
-          <span>PLAY</span>
+          <span>{t("stats.play")}</span>
         </button>
         <button
           onClick={onSleep}
-          className="px-2 py-2 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-0.5"
+          className="px-2 py-2 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-0.5 min-h-[44px] min-w-[44px]"
         >
           <span className="text-base">💤</span>
-          <span>SLEEP</span>
+          <span>{t("stats.sleep")}</span>
         </button>
       </div>
     </section>

@@ -74,6 +74,18 @@
 }
 .animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
 
+@keyframes particle-fly {
+  0% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -20px); }
+  10% { opacity: 1; transform: translate(-50%, 0); }
+  80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
 :root {
   --radius: 0.5rem;
 
