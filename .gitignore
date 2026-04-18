@@ -20,6 +20,12 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Electron build artifacts
+electron-package/
+electron-release/
+electron/pet-dist/
+electron/panel-dist/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

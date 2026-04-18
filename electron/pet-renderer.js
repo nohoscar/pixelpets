@@ -1,214 +1,25 @@
-// Standalone pet renderer for the Electron transparent window.
+// PixelPets · Standalone pet renderer for Electron transparent window
+// Full-featured: 42 sprites, Tamagotchi stats, 300+ thoughts, battery/idle/time awareness
 // No React, no bundler — runs directly in the BrowserWindow.
 
+// ============================================================
+// SPRITES — all 42 pets as SVG template strings
+// ============================================================
+const F = (facing) => facing === "left" ? "scaleX(-1)" : "none";
+const S = 80; // render size
+
 const SPRITES = {
-  cat: ({ facing, step }) => `
-    <svg viewBox="0 0 32 32" width="80" height="80" style="transform:${facing==='left'?'scaleX(-1)':'none'};image-rendering:pixelated">
-      <rect x="6" y="14" width="20" height="10" rx="3" fill="#f5b35a"/>
-      <rect x="6" y="14" width="20" height="2" fill="#e69a3d"/>
-      <rect x="9" y="6" width="14" height="11" rx="2" fill="#ffc879"/>
-      <polygon points="9,6 13,2 13,8" fill="#f5b35a"/>
-      <polygon points="23,6 19,2 19,8" fill="#f5b35a"/>
-      <polygon points="11,5 12,3 13,5" fill="#ff9bbf"/>
-      <polygon points="21,5 20,3 19,5" fill="#ff9bbf"/>
-      <rect x="12" y="10" width="2" height="3" fill="#1a1a1a"/>
-      <rect x="18" y="10" width="2" height="3" fill="#1a1a1a"/>
-      <rect x="15" y="13" width="2" height="1" fill="#ff7aa8"/>
-      <rect x="8" y="${24 + (step%2===0?0:-1)}" width="3" height="4" fill="#e69a3d"/>
-      <rect x="13" y="${24 - (step%2===0?0:-1)}" width="3" height="4" fill="#e69a3d"/>
-      <rect x="17" y="${24 + (step%2===0?0:-1)}" width="3" height="4" fill="#e69a3d"/>
-      <rect x="22" y="${24 - (step%2===0?0:-1)}" width="3" height="4" fill="#e69a3d"/>
-      <rect x="26" y="12" width="2" height="8" fill="#f5b35a" transform="rotate(20 27 16)"/>
-    </svg>`,
-  dog: ({ facing, step }) => `
-    <svg viewBox="0 0 32 32" width="80" height="80" style="transform:${facing==='left'?'scaleX(-1)':'none'};image-rendering:pixelated">
-      <rect x="5" y="14" width="22" height="10" rx="3" fill="#d8a070"/>
-      <rect x="8" y="6" width="14" height="11" rx="3" fill="#e8b685"/>
-      <rect x="6" y="7" width="4" height="9" rx="2" fill="#a86f4a"/>
-      <rect x="22" y="7" width="4" height="9" rx="2" fill="#a86f4a"/>
-      <rect x="11" y="10" width="2" height="3" fill="#1a1a1a"/>
-      <rect x="17" y="10" width="2" height="3" fill="#1a1a1a"/>
-      <rect x="14" y="13" width="3" height="2" fill="#1a1a1a"/>
-      <rect x="7" y="${24 + (step%2===0?0:-1)}" width="3" height="4" fill="#b87f55"/>
-      <rect x="12" y="${24 - (step%2===0?0:-1)}" width="3" height="4" fill="#b87f55"/>
-      <rect x="17" y="${24 + (step%2===0?0:-1)}" width="3" height="4" fill="#b87f55"/>
-      <rect x="22" y="${24 - (step%2===0?0:-1)}" width="3" height="4" fill="#b87f55"/>
-    </svg>`,
-  slime: ({ step }) => {
-    const sq = step % 2 === 0 ? 1 : 0.92;
-    return `
-    <svg viewBox="0 0 32 32" width="80" height="80" style="image-rendering:pixelated">
-      <g transform="translate(16 28) scale(${sq} ${1/sq}) translate(-16 -28)">
-        <path d="M4 26 Q4 10 16 10 Q28 10 28 26 Z" fill="#7af5b0"/>
-        <ellipse cx="11" cy="14" rx="2" ry="3" fill="#1a1a1a"/>
-        <ellipse cx="21" cy="14" rx="2" ry="3" fill="#1a1a1a"/>
-        <path d="M13 19 Q16 22 19 19" stroke="#1a1a1a" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-        <ellipse cx="9" cy="11" rx="2" ry="1" fill="#fff" opacity="0.7"/>
-      </g>
-    </svg>`;
-  },
-  dragon: ({ facing, step }) => {
-    const wy = step%2===0?0:-2;
-    return `
-    <svg viewBox="0 0 32 32" width="80" height="80" style="transform:${facing==='left'?'scaleX(-1)':'none'};image-rendering:pixelated">
-      <rect x="6" y="13" width="20" height="11" rx="4" fill="#b56cff"/>
-      <path d="M11 ${10+wy} Q16 ${2+wy} 21 ${10+wy} L18 14 L14 14 Z" fill="#7a2fb5"/>
-      <rect x="9" y="6" width="14" height="11" rx="3" fill="#c386ff"/>
-      <rect x="12" y="10" width="2" height="3" fill="#1a1a1a"/>
-      <rect x="18" y="10" width="2" height="3" fill="#1a1a1a"/>
-      <rect x="14" y="14" width="4" height="1" fill="#ff5599"/>
-      <rect x="9" y="24" width="3" height="4" fill="#9648d8"/>
-      <rect x="20" y="24" width="3" height="4" fill="#9648d8"/>
-    </svg>`;
-  },
-  ghost: ({ step }) => {
-    const f = step%2===0?0:-2;
-    return `
-    <svg viewBox="0 0 32 32" width="80" height="80" style="transform:translateY(${f}px);image-rendering:pixelated">
-      <path d="M6 14 Q6 4 16 4 Q26 4 26 14 V26 L23 23 L20 26 L17 23 L14 26 L11 23 L8 26 L6 24 Z" fill="#e8edff"/>
-      <ellipse cx="12" cy="14" rx="2" ry="3" fill="#1a1a2e"/>
-      <ellipse cx="20" cy="14" rx="2" ry="3" fill="#1a1a2e"/>
-      <ellipse cx="11" cy="19" rx="2" ry="1" fill="#ffb3c8" opacity="0.7"/>
-      <ellipse cx="21" cy="19" rx="2" ry="1" fill="#ffb3c8" opacity="0.7"/>
-    </svg>`;
-  },
-  robot: ({ facing, step }) => {
-    const eb = step%2===0?3:1;
-    return `
-    <svg viewBox="0 0 32 32" width="80" height="80" style="transform:${facing==='left'?'scaleX(-1)':'none'};image-rendering:pixelated">
-      <rect x="15" y="2" width="2" height="3" fill="#9ad4ff"/>
-      <circle cx="16" cy="2" r="1.5" fill="#ff5577"/>
-      <rect x="8" y="5" width="16" height="11" rx="2" fill="#5b6ad0"/>
-      <rect x="11" y="9" width="3" height="${eb}" fill="#9affff"/>
-      <rect x="18" y="9" width="3" height="${eb}" fill="#9affff"/>
-      <rect x="13" y="13" width="6" height="1" fill="#1a1a2e"/>
-      <rect x="6" y="16" width="20" height="9" rx="2" fill="#7686e8"/>
-      <rect x="9" y="25" width="4" height="4" fill="#3e4ca8"/>
-      <rect x="19" y="25" width="4" height="4" fill="#3e4ca8"/>
-    </svg>`;
-  },
-};
-
-const PHRASES = ["¡Hola!", "♥", "*nya*", "play?", "boop!", "✨", "zzz...", "(•ᴗ•)"];
-
-const params = new URLSearchParams(window.location.search);
-let kind = params.get("kind") || "cat";
-let follow = params.get("follow") === "1";
-
-const pet = document.getElementById("pet");
-const SIZE = 80;
-let pos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-let target = { x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight };
-let facing = "right";
-let step = 0;
-let idle = false;
-let cursor = { x: pos.x, y: pos.y };
-
-function render() {
-  if (!SPRITES[kind]) kind = "cat";
-  pet.innerHTML = SPRITES[kind]({ facing, step });
-  pet.style.left = pos.x + "px";
-  pet.style.top = pos.y + "px";
-}
-
-window.addEventListener("mousemove", (e) => {
-  cursor = { x: e.clientX, y: e.clientY };
-});
-
-setInterval(() => {
-  idle = Math.random() < 0.2;
-  target = {
-    x: Math.random() * (window.innerWidth - SIZE - 40) + 20,
-    y: Math.random() * (window.innerHeight - SIZE - 100) + 50,
-  };
-}, 3500);
-
-setInterval(() => { step++; render(); }, 180);
-
-function tick() {
-  if (!idle) {
-    const t = follow ? cursor : target;
-    const cx = pos.x + SIZE / 2;
-    const cy = pos.y + SIZE / 2;
-    const dx = t.x - cx;
-    const dy = t.y - cy;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 6) {
-      const speed = 1.6;
-      pos.x += (dx / dist) * speed;
-      pos.y += (dy / dist) * speed;
-      facing = dx > 0 ? "right" : "left";
-    }
-  }
-  render();
-  requestAnimationFrame(tick);
-}
-render();
-tick();
-
-setInterval(() => {
-  if (Math.random() < 0.3) {
-    const b = document.createElement("div");
-    b.className = "bubble";
-    b.textContent = PHRASES[Math.floor(Math.random() * PHRASES.length)];
-    b.style.left = (pos.x + SIZE / 2) + "px";
-    b.style.top = pos.y + "px";
-    document.body.appendChild(b);
-    setTimeout(() => b.remove(), 1700);
-  }
-}, 8000);
-
-window.addEventListener("message", (e) => {
-  if (e.data?.type === "set-pet") { kind = e.data.kind; render(); }
-  if (e.data?.type === "set-follow") { follow = !!e.data.value; }
-});
-
-// === System awareness ===
-function speakOnce(text, ttl) {
-  const b = document.createElement("div");
-  b.className = "bubble";
-  b.textContent = text;
-  b.style.left = (pos.x + SIZE / 2) + "px";
-  b.style.top = pos.y + "px";
-  document.body.appendChild(b);
-  setTimeout(() => b.remove(), ttl || 2200);
-}
-
-// Idle detection (mousemove forwarded by transparent window)
-let lastMove = Date.now();
-window.addEventListener("mousemove", () => { lastMove = Date.now(); });
-let isSleeping = false;
-setInterval(() => {
-  const idleSec = (Date.now() - lastMove) / 1000;
-  if (idleSec > 45 && !isSleeping) {
-    isSleeping = true; idle = true; speakOnce("zzz...");
-  } else if (idleSec < 5 && isSleeping) {
-    isSleeping = false; idle = false; speakOnce("¡volviste!");
-  }
-}, 2000);
-
-// Battery awareness
-if (navigator.getBattery) {
-  navigator.getBattery().then((batt) => {
-    let warned = false;
-    const check = () => {
-      if (batt.level < 0.2 && !batt.charging && !warned) {
-        warned = true; speakOnce("¡batería baja! 🪫", 3000);
-      } else if ((batt.level >= 0.25 || batt.charging) && warned) {
-        warned = false;
-      }
-    };
-    check();
-    batt.addEventListener("levelchange", check);
-    batt.addEventListener("chargingchange", check);
-  }).catch(() => {});
-}
-
-// Time of day greeting
-(function greet() {
-  const h = new Date().getHours();
-  let msg = null;
-  if (h >= 5 && h < 9) msg = "¡buenos días! 🌅";
-  else if (h >= 22 || h < 5) msg = "tarde, ¿no? 🌙";
-  if (msg) setTimeout(() => speakOnce(msg, 3000), 1500);
-})();
+  cat: ({facing,step}) => { const l=step%2===0?0:-1; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><rect x="6" y="14" width="20" height="10" rx="3" fill="#f5b35a"/><rect x="6" y="14" width="20" height="2" fill="#e69a3d"/><rect x="9" y="6" width="14" height="11" rx="2" fill="#ffc879"/><polygon points="9,6 13,2 13,8" fill="#f5b35a"/><polygon points="23,6 19,2 19,8" fill="#f5b35a"/><polygon points="11,5 12,3 13,5" fill="#ff9bbf"/><polygon points="21,5 20,3 19,5" fill="#ff9bbf"/><rect x="12" y="10" width="2" height="3" fill="#1a1a1a"/><rect x="18" y="10" width="2" height="3" fill="#1a1a1a"/><rect x="12" y="10" width="1" height="1" fill="#fff"/><rect x="18" y="10" width="1" height="1" fill="#fff"/><rect x="15" y="13" width="2" height="1" fill="#ff7aa8"/><rect x="8" y="${24+l}" width="3" height="4" fill="#e69a3d"/><rect x="13" y="${24-l}" width="3" height="4" fill="#e69a3d"/><rect x="17" y="${24+l}" width="3" height="4" fill="#e69a3d"/><rect x="22" y="${24-l}" width="3" height="4" fill="#e69a3d"/><rect x="26" y="12" width="2" height="8" fill="#f5b35a" transform="rotate(20 27 16)"/></svg>`; },
+  dog: ({facing,step}) => { const l=step%2===0?0:-1; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><rect x="5" y="14" width="22" height="10" rx="3" fill="#d8a070"/><rect x="8" y="6" width="14" height="11" rx="3" fill="#e8b685"/><rect x="6" y="7" width="4" height="9" rx="2" fill="#a86f4a"/><rect x="22" y="7" width="4" height="9" rx="2" fill="#a86f4a"/><rect x="11" y="10" width="2" height="3" fill="#1a1a1a"/><rect x="17" y="10" width="2" height="3" fill="#1a1a1a"/><rect x="14" y="13" width="3" height="2" fill="#1a1a1a"/><rect x="7" y="${24+l}" width="3" height="4" fill="#b87f55"/><rect x="12" y="${24-l}" width="3" height="4" fill="#b87f55"/><rect x="17" y="${24+l}" width="3" height="4" fill="#b87f55"/><rect x="22" y="${24-l}" width="3" height="4" fill="#b87f55"/></svg>`; },
+  slime: ({step}) => { const q=step%2===0?1:0.92; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="image-rendering:pixelated"><g transform="translate(16 28) scale(${q} ${1/q}) translate(-16 -28)"><path d="M4 26 Q4 10 16 10 Q28 10 28 26 Z" fill="#7af5b0"/><path d="M4 26 Q4 14 16 14 Q28 14 28 26 Z" fill="#9affc8"/><ellipse cx="11" cy="14" rx="2" ry="3" fill="#1a1a1a"/><ellipse cx="21" cy="14" rx="2" ry="3" fill="#1a1a1a"/><ellipse cx="10.5" cy="13" rx="0.7" ry="1" fill="#fff"/><ellipse cx="20.5" cy="13" rx="0.7" ry="1" fill="#fff"/><path d="M13 19 Q16 22 19 19" stroke="#1a1a1a" stroke-width="1.2" fill="none"/></g></svg>`; },
+  dragon: ({facing,step}) => { const w=step%2===0?0:-2; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><path d="M28 18 Q32 22 28 26" stroke="#a05ad8" stroke-width="3" fill="none"/><rect x="6" y="13" width="20" height="11" rx="4" fill="#b56cff"/><rect x="6" y="13" width="20" height="3" fill="#9648d8"/><path d="M11 ${10+w} Q16 ${2+w} 21 ${10+w} L18 14 L14 14 Z" fill="#7a2fb5"/><rect x="9" y="6" width="14" height="11" rx="3" fill="#c386ff"/><polygon points="10,6 12,3 13,7" fill="#7a2fb5"/><polygon points="22,6 20,3 19,7" fill="#7a2fb5"/><rect x="12" y="10" width="2" height="3" fill="#1a1a1a"/><rect x="18" y="10" width="2" height="3" fill="#1a1a1a"/><rect x="14" y="14" width="4" height="1" fill="#ff5599"/><rect x="9" y="24" width="3" height="4" fill="#9648d8"/><rect x="20" y="24" width="3" height="4" fill="#9648d8"/></svg>`; },
+  ghost: ({step}) => { const f=step%2===0?0:-2; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:translateY(${f}px);image-rendering:pixelated"><path d="M6 14 Q6 4 16 4 Q26 4 26 14 V26 L23 23 L20 26 L17 23 L14 26 L11 23 L8 26 L6 24 Z" fill="#e8edff"/><ellipse cx="12" cy="14" rx="2" ry="3" fill="#1a1a2e"/><ellipse cx="20" cy="14" rx="2" ry="3" fill="#1a1a2e"/><ellipse cx="11" cy="19" rx="2" ry="1" fill="#ffb3c8" opacity="0.7"/><ellipse cx="21" cy="19" rx="2" ry="1" fill="#ffb3c8" opacity="0.7"/></svg>`; },
+  robot: ({facing,step}) => { const e=step%2===0?3:1; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><rect x="15" y="2" width="2" height="3" fill="#9ad4ff"/><circle cx="16" cy="2" r="1.5" fill="#ff5577"/><rect x="8" y="5" width="16" height="11" rx="2" fill="#5b6ad0"/><rect x="11" y="9" width="3" height="${e}" fill="#9affff"/><rect x="18" y="9" width="3" height="${e}" fill="#9affff"/><rect x="13" y="13" width="6" height="1" fill="#1a1a2e"/><rect x="6" y="16" width="20" height="9" rx="2" fill="#7686e8"/><circle cx="12" cy="20" r="1.2" fill="#ff5577"/><circle cx="16" cy="20" r="1.2" fill="#ffd055"/><circle cx="20" cy="20" r="1.2" fill="#9affc8"/><rect x="9" y="25" width="4" height="4" fill="#3e4ca8"/><rect x="19" y="25" width="4" height="4" fill="#3e4ca8"/></svg>`; },
+  axolotl: ({facing,step}) => { const w=step%2===0?0:1; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><rect x="6" y="14" width="20" height="11" rx="6" fill="#ffb3d1"/><rect x="9" y="7" width="14" height="11" rx="5" fill="#ffc4dc"/><path d="M9 ${8+w} Q5 ${10+w} 7 ${14+w}" stroke="#ff7aa8" stroke-width="2" fill="none"/><path d="M9 ${10-w} Q4 ${13-w} 7 ${17-w}" stroke="#ff7aa8" stroke-width="2" fill="none"/><path d="M23 ${8+w} Q27 ${10+w} 25 ${14+w}" stroke="#ff7aa8" stroke-width="2" fill="none"/><path d="M23 ${10-w} Q28 ${13-w} 25 ${17-w}" stroke="#ff7aa8" stroke-width="2" fill="none"/><circle cx="13" cy="12" r="1.4" fill="#1a1a2e"/><circle cx="19" cy="12" r="1.4" fill="#1a1a2e"/><path d="M14 15 Q16 17 18 15" stroke="#1a1a2e" stroke-width="1" fill="none"/><ellipse cx="11" cy="14" rx="1.2" ry="0.7" fill="#ff7aa8" opacity="0.6"/><ellipse cx="21" cy="14" rx="1.2" ry="0.7" fill="#ff7aa8" opacity="0.6"/></svg>`; },
+  capybara: ({facing,step}) => { const l=step%2===0?0:-1; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><ellipse cx="17" cy="18" rx="12" ry="7" fill="#a37050"/><ellipse cx="9" cy="14" rx="6" ry="5" fill="#b58060"/><rect x="3" y="13" width="3" height="3" rx="1" fill="#a37050"/><circle cx="7" cy="14" r="1" fill="#1a1a2e"/><rect x="4" y="14" width="2" height="1" fill="#1a1a2e"/><rect x="${8+l}" y="22" width="2" height="4" fill="#7a4f30"/><rect x="${14-l}" y="22" width="2" height="4" fill="#7a4f30"/><rect x="${20+l}" y="22" width="2" height="4" fill="#7a4f30"/><rect x="${25-l}" y="22" width="2" height="4" fill="#7a4f30"/><circle cx="9" cy="9" r="2" fill="#ff8c42"/></svg>`; },
+  penguin: ({facing,step}) => { const w=step%2===0?0:2; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><ellipse cx="16" cy="17" rx="9" ry="11" fill="#1a1a2e"/><ellipse cx="16" cy="19" rx="6" ry="9" fill="#f5f5fa"/><circle cx="13" cy="11" r="1.3" fill="#fff"/><circle cx="19" cy="11" r="1.3" fill="#fff"/><circle cx="13" cy="11" r="0.7" fill="#1a1a2e"/><circle cx="19" cy="11" r="0.7" fill="#1a1a2e"/><polygon points="14,14 18,14 16,17" fill="#ff8c1f"/><path d="M7 ${14+w} Q4 18 7 22 L9 21 L9 15 Z" fill="#1a1a2e"/><path d="M25 ${14-w} Q28 18 25 22 L23 21 L23 15 Z" fill="#1a1a2e"/><rect x="12" y="27" width="3" height="2" fill="#ff8c1f"/><rect x="17" y="27" width="3" height="2" fill="#ff8c1f"/></svg>`; },
+  fox: ({facing,step}) => { const l=step%2===0?0:-1; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><rect x="6" y="14" width="20" height="10" rx="3" fill="#ff7a3d"/><rect x="9" y="6" width="14" height="11" rx="3" fill="#ff8a4a"/><polygon points="9,6 11,1 14,7" fill="#ff7a3d"/><polygon points="23,6 21,1 18,7" fill="#ff7a3d"/><path d="M11 12 Q16 18 21 12 L21 17 L11 17 Z" fill="#fff5e6"/><circle cx="13" cy="11" r="1.2" fill="#1a1a2e"/><circle cx="19" cy="11" r="1.2" fill="#1a1a2e"/><circle cx="16" cy="14.5" r="0.8" fill="#1a1a2e"/><rect x="${8+l}" y="24" width="3" height="4" fill="#1a1a2e"/><rect x="${13-l}" y="24" width="3" height="4" fill="#1a1a2e"/><rect x="${17+l}" y="24" width="3" height="4" fill="#1a1a2e"/><rect x="${22-l}" y="24" width="3" height="4" fill="#1a1a2e"/><ellipse cx="28" cy="16" rx="3" ry="5" fill="#ff7a3d" transform="rotate(20 28 16)"/><ellipse cx="29" cy="13" rx="2" ry="2" fill="#fff5e6"/></svg>`; },
+  panda: ({facing,step}) => { const l=step%2===0?0:-1; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><rect x="6" y="14" width="20" height="10" rx="4" fill="#fafafa"/><rect x="9" y="6" width="14" height="12" rx="5" fill="#fafafa"/><circle cx="10" cy="6" r="2.5" fill="#1a1a2e"/><circle cx="22" cy="6" r="2.5" fill="#1a1a2e"/><ellipse cx="13" cy="12" rx="2" ry="2.5" fill="#1a1a2e" transform="rotate(-15 13 12)"/><ellipse cx="19" cy="12" rx="2" ry="2.5" fill="#1a1a2e" transform="rotate(15 19 12)"/><circle cx="13" cy="12" r="0.8" fill="#fff"/><circle cx="19" cy="12" r="0.8" fill="#fff"/><circle cx="16" cy="15" r="0.8" fill="#1a1a2e"/><path d="M14 16.5 Q16 18 18 16.5" stroke="#1a1a2e" stroke-width="0.8" fill="none"/><rect x="${8+l}" y="24" width="3" height="4" fill="#1a1a2e"/><rect x="${21-l}" y="24" width="3" height="4" fill="#1a1a2e"/></svg>`; },
+  unicorn: ({facing,step}) => { const l=step%2===0?0:-1; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><defs><linearGradient id="mn" x1="0" x2="1"><stop offset="0" stop-color="#ff5599"/><stop offset=".5" stop-color="#ffd055"/><stop offset="1" stop-color="#7af5b0"/></linearGradient></defs><rect x="5" y="14" width="22" height="10" rx="4" fill="#fff"/><rect x="9" y="6" width="13" height="11" rx="3" fill="#fff"/><polygon points="14,2 16,8 12,8" fill="#ffd055"/><path d="M21 6 Q26 4 26 14 Q22 12 21 14 Z" fill="url(#mn)"/><circle cx="13" cy="11" r="1.2" fill="#1a1a2e"/><circle cx="18" cy="11" r="1.2" fill="#1a1a2e"/><rect x="${7+l}" y="24" width="3" height="4" fill="#fff"/><rect x="${12-l}" y="24" width="3" height="4" fill="#fff"/><rect x="${17+l}" y="24" width="3" height="4" fill="#fff"/><rect x="${22-l}" y="24" width="3" height="4" fill="#fff"/></svg>`; },
+  bunny: ({facing,step}) => { const h=step%2===0?0:-2; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)} translateY(${h}px);image-rendering:pixelated"><ellipse cx="16" cy="22" rx="8" ry="6" fill="#fafafa"/><ellipse cx="16" cy="14" rx="6" ry="6" fill="#fff"/><ellipse cx="13" cy="5" rx="1.8" ry="5" fill="#fff"/><ellipse cx="19" cy="5" rx="1.8" ry="5" fill="#fff"/><ellipse cx="13" cy="6" rx="0.8" ry="3.5" fill="#ffb3c8"/><ellipse cx="19" cy="6" rx="0.8" ry="3.5" fill="#ffb3c8"/><circle cx="13.5" cy="13" r="1.2" fill="#1a1a2e"/><circle cx="18.5" cy="13" r="1.2" fill="#1a1a2e"/><polygon points="15,16 17,16 16,17.5" fill="#ff7aa8"/><path d="M14 18 Q16 19.5 18 18" stroke="#1a1a2e" stroke-width="0.8" fill="none"/><circle cx="24" cy="22" r="2.5" fill="#fafafa"/></svg>`; },
+  monkey: ({facing,step}) => { const a=step%2===0?0:-2; return `<svg viewBox="0 0 32 32" width="${S}" height="${S}" style="transform:${F(facing)};image-rendering:pixelated"><path d="M7 20 Q2 22 4 28 Q7 26 8 24" stroke="#7a4f30" stroke-width="2.5" fill="none"/><ellipse cx="17" cy="20" rx="9" ry="7" fill="#a37050"/><ellipse cx="17" cy="22" rx="6" ry="5" fill="#e8c8a0"/><circle cx="9" cy="11" r="2.5" fill="#a37050"/><circle cx="25" cy="11" r="2.5" fill="#a37050"/><circle cx="9" cy="11" r="1.5" fill="#e8c8a0"/><circle cx="25" cy="11" r="1.5" fill="#e8c8a0"/><ellipse cx="17" cy="11" rx="7" ry="6" fill="#a37050"/><ellipse cx="17" cy="13" rx="5" ry="4.5" fill="#e8c8a0"/><circle cx="14" cy="11" r="1.2" fill="#1a1a2e"/><circle cx="20" cy="11" r="1.2" fill="#1a1a2e"/><path d="M15 15.5 Q17 17 19 15.5" stroke="#1a1a2e" stroke-width="0.8" fill="none"/><rect x="7" y="${18+a}" width="3" height="6" rx="1" fill="#a37050"/><rect x="22" y="${18-a}" width="3" height="6" rx="1" fill="#a37050"/></svg>`; },

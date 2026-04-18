@@ -4,7 +4,7 @@
 //   2) Pet overlay: transparent, frameless, click-through, always-on-top
 // Tray menu: switch pets, toggle follow cursor, show/hide panel, quit.
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, screen, shell } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, screen, shell, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -15,19 +15,57 @@ let currentPet = "cat";
 let followCursor = false;
 let petVisible = true;
 
+const preloadPath = path.join(__dirname, "preload.cjs");
+
 const PETS = [
+  // Cute classics
   { kind: "cat",      name: "Mochi"      },
   { kind: "dog",      name: "Pixel"      },
+  { kind: "bunny",    name: "Bun"        },
+  { kind: "fox",      name: "Kitsune"    },
+  { kind: "panda",    name: "Bao"        },
+  { kind: "axolotl",  name: "Axoltito"   },
+  { kind: "capybara", name: "Capy"       },
+  { kind: "penguin",  name: "Tux"        },
+  { kind: "monkey",   name: "Coco"       },
+  { kind: "unicorn",  name: "Sparkle"    },
+  // Cartoon
   { kind: "slime",    name: "Goo"        },
+  { kind: "slimemage",name: "Merlin"     },
+  { kind: "mushroom", name: "Toad"       },
+  // Fantasy
   { kind: "dragon",   name: "Byte"       },
   { kind: "ghost",    name: "Boo"        },
   { kind: "robot",    name: "Bit-9"      },
-  { kind: "pikachu",  name: "Pika"       },
-  { kind: "kirby",    name: "Kirby"      },
-  { kind: "yoshi",    name: "Yoshi"      },
-  { kind: "creeper",  name: "Creeper"    },
-  { kind: "axolotl",  name: "Axoltito"   },
-  { kind: "mushroom", name: "Toad"       },
+  { kind: "alien",    name: "Zyx"        },
+  // Lovecraft
+  { kind: "cthulhu",      name: "Cthulhu"     },
+  { kind: "shoggoth",     name: "Shoggoth"    },
+  { kind: "blackgoat",    name: "Shub"        },
+  { kind: "necronomicon", name: "Necro"       },
+  { kind: "yurei",        name: "Yūrei"       },
+  // Videogames
+  { kind: "pikachu",       name: "Pika"        },
+  { kind: "kirby",         name: "Kirby"       },
+  { kind: "creeper",       name: "Creeper"     },
+  { kind: "yoshi",         name: "Yoshi"       },
+  { kind: "metroid",       name: "Metroid"     },
+  { kind: "companionCube", name: "Cube"        },
+  { kind: "chocobo",       name: "Chocobo"     },
+  { kind: "booMario",      name: "Boo Mario"   },
+  { kind: "bulborb",       name: "Bulborb"     },
+  { kind: "headcrab",      name: "Headcrab"    },
+  { kind: "isaac",         name: "Isaac"       },
+  // Sci-fi / Horror
+  { kind: "facehugger",    name: "Hugger"      },
+  { kind: "xenomorph",     name: "Xeno"        },
+  { kind: "dalek",         name: "Dalek"       },
+  { kind: "tribble",       name: "Tribble"     },
+  { kind: "bb8",           name: "BB-8"        },
+  { kind: "weepingAngel",  name: "Angel"       },
+  { kind: "gremlin",       name: "Gremlin"     },
+  { kind: "chestburster",  name: "Burster"     },
+  { kind: "yautja",        name: "Yautja"      },
 ];
 
 function resolveAppEntry() {
@@ -55,8 +93,17 @@ function buildPetUrl() {
 }
 
 function buildPanelUrl() {
+  // Panel is built separately by vite.panel.config.ts
+  const candidates = [
+    path.join(__dirname, "panel-dist", "electron", "panel.html"),
+    path.join(__dirname, "..", "electron", "panel-dist", "electron", "panel.html"),
+    path.join(process.resourcesPath || "", "app", "panel-dist", "electron", "panel.html"),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return `file:///${c.replace(/\\/g, "/")}`;
+  }
+  // Fallback to old method
   const file = resolveAppEntry().replace(/\\/g, "/");
-  // Hash route works regardless of base path — TanStack Router handles it client-side.
   return `file:///${file}`;
 }
 
@@ -72,6 +119,7 @@ function createPanelWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: preloadPath,
     },
   });
 
@@ -104,7 +152,7 @@ function createPetWindow() {
     focusable: false,
     fullscreenable: false,
     backgroundColor: "#00000000",
-    webPreferences: { contextIsolation: true, nodeIntegration: false },
+    webPreferences: { contextIsolation: true, nodeIntegration: false, preload: preloadPath },
   });
 
   petWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -191,12 +239,61 @@ function buildMenu() {
   ]);
 }
 
+// IPC: Panel → Main → Pet overlay
+ipcMain.on("set-pet", (_e, kind) => {
+  currentPet = kind;
+  if (petWindow) petWindow.webContents.send("set-pet", kind);
+  if (tray) tray.setContextMenu(buildMenu());
+});
+
+ipcMain.on("set-follow", (_e, value) => {
+  followCursor = !!value;
+  if (petWindow) petWindow.webContents.send("set-follow", value);
+  if (tray) tray.setContextMenu(buildMenu());
+});
+
+// Panel → Main → Pet overlay: feed/play/sleep actions
+ipcMain.on("pet-action", (_e, action) => {
+  if (petWindow) petWindow.webContents.send("pet-action", action);
+});
+
+// Pet overlay → Main → Panel: stats updates
+ipcMain.on("stats-update", (_e, stats) => {
+  if (panelWindow) panelWindow.webContents.send("stats-update", stats);
+});
+
+// Pet overlay: dynamic click-through based on mouse position over pet
+ipcMain.on("set-mouse-hit", (_e, hit) => {
+  if (petWindow) {
+    if (hit) {
+      petWindow.setIgnoreMouseEvents(false);
+    } else {
+      petWindow.setIgnoreMouseEvents(true, { forward: true });
+    }
+  }
+});
+
 app.whenReady().then(() => {
   createPanelWindow();
   createPetWindow();
   tray = new Tray(buildTrayIcon());
   tray.setToolTip("PixelPets — tu mascotita está viva 🐾");
   tray.setContextMenu(buildMenu());
+
+  // Battery monitoring via Electron's powerMonitor
+  const { powerMonitor } = require("electron");
+  const sendBattery = () => {
+    // powerMonitor doesn't have a direct battery level API on all platforms,
+    // but we can detect power state changes
+    const onAC = powerMonitor.isOnBatteryPower !== undefined ? !powerMonitor.isOnBatteryPower() : true;
+    const info = { onAC };
+    if (petWindow) petWindow.webContents.send("battery-update", info);
+    if (panelWindow) panelWindow.webContents.send("battery-update", info);
+  };
+  powerMonitor.on("on-ac", sendBattery);
+  powerMonitor.on("on-battery", sendBattery);
+  // Send initial state after windows load
+  setTimeout(sendBattery, 3000);
 });
 
 // Keep app alive on macOS even if all windows close.

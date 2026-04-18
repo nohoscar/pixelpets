@@ -47,22 +47,24 @@ jobs:
       - name: Build React app
         run: npx vite build
 
+      - name: Build pet overlay bundle
+        run: npx vite build --config electron/vite.pet.config.ts
+
       - name: Prepare Electron app
         shell: bash
         run: |
           rm -rf electron-package
-          mkdir -p electron-package
+          mkdir -p electron-package/pet-dist
 
           # Copy Electron files
           cp electron/main.cjs electron-package/
           cp electron/pet.html electron-package/
-          cp electron/pet-renderer.js electron-package/
           cp electron/package.json electron-package/
 
-          # The Electron pet overlay uses pet.html (standalone, no React build needed).
+          # Copy the pet overlay bundle (built by vite.pet.config.ts)
+          cp electron/pet-dist/pet-bundle.js electron-package/pet-dist/
+
           # The panel window needs the built React app.
-          # TanStack Start SSR build puts assets in dist/client/ but no index.html,
-          # so we generate a minimal one that loads the assets.
           mkdir -p electron-package/dist/client
 
           # Copy built client assets

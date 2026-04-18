@@ -10,37 +10,74 @@
       overflow: hidden;
       cursor: none;
     }
-    #pet {
+    #root {
       position: fixed;
-      width: 80px; height: 80px;
-      pointer-events: none;
-      transition: top 0.05s linear, left 0.05s linear;
-      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
-      image-rendering: pixelated;
+      inset: 0;
+      background: transparent;
     }
-    .bubble {
-      position: fixed;
-      padding: 4px 10px;
-      background: rgba(20, 16, 40, 0.85);
-      color: #7af5b0;
-      font-family: monospace;
-      font-size: 12px;
-      border-radius: 8px;
+    /* Pet needs pointer-events for drag/click */
+    .pointer-events-auto { pointer-events: auto; }
+    .pointer-events-none { pointer-events: none; }
+    .absolute { position: absolute; }
+    .fixed { position: fixed; }
+    .select-none { user-select: none; }
+    .w-full { width: 100%; }
+    .h-full { height: 100%; }
+
+    /* Speech bubbles — smaller for desktop overlay */
+    .glass {
+      background: rgba(20, 16, 40, 0.9);
+      backdrop-filter: blur(10px);
       border: 1px solid rgba(122, 245, 176, 0.5);
-      pointer-events: none;
-      animation: pop 1.6s ease-out forwards;
-      box-shadow: 0 0 12px rgba(122, 245, 176, 0.4);
+      box-shadow: 0 0 12px rgba(122, 245, 176, 0.3);
     }
-    @keyframes pop {
-      0% { opacity: 0; transform: translate(-50%, -10px) scale(0.8); }
-      15% { opacity: 1; transform: translate(-50%, -16px) scale(1); }
-      80% { opacity: 1; transform: translate(-50%, -16px) scale(1); }
-      100% { opacity: 0; transform: translate(-50%, -22px) scale(0.9); }
+    .rounded-md { border-radius: 6px; }
+    .rounded-full { border-radius: 9999px; }
+    .whitespace-nowrap { white-space: nowrap; }
+    .px-2 { padding-left: 6px; padding-right: 6px; }
+    .py-1 { padding-top: 2px; padding-bottom: 2px; }
+    .text-xs { font-size: 9px; line-height: 1.2; }
+    .text-base { font-size: 12px; }
+    .text-neon { color: #7af5b0; text-shadow: 0 0 8px rgba(122, 245, 176, 0.6); }
+    .text-neon-pink { color: #ff7aa8; }
+    .font-display { font-family: "Press Start 2P", monospace; letter-spacing: 0.02em; }
+    .drop-shadow { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+    .gap-1 { gap: 4px; }
+    .flex { display: flex; }
+    .animate-in { animation: fadeZoom 0.2s ease-out; }
+    .fade-in { opacity: 1; }
+    .zoom-in { transform: scale(1); }
+
+    /* Need icons row above pet */
+    .-top-7 { top: -22px; }
+    .-top-8 { top: -26px; }
+    .-top-6 { top: -20px; }
+    .left-1\/2 { left: 50%; }
+    .-translate-x-1\/2 { transform: translateX(-50%); }
+    .-bottom-4 { bottom: -4px; }
+
+    /* Animations */
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
     }
+    @keyframes fadeZoom {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-bob { animation: bob 1.6s ease-in-out infinite; }
+    .animate-spin { animation: spin 1s linear infinite; }
   </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" />
 </head>
 <body>
-  <div id="pet"></div>
-  <script src="./pet-renderer.js"></script>
+  <div id="root"></div>
+  <script type="module" src="./pet-dist/pet-bundle.js"></script>
 </body>
 </html>

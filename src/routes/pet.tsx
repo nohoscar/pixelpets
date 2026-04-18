@@ -27,10 +27,17 @@ function PetOnly() {
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const k = params.get("kind") as PetKind | null;
+    // Read params from both search params locations:
+    // - Normal URL: /pet?kind=cat&follow=1
+    // - Electron hash routing: index.html?kind=cat&follow=1#/pet
+    const searchFromHash = new URLSearchParams(window.location.search);
+    const searchFromPath = new URLSearchParams(window.location.hash.split("?")[1] || "");
+    
+    const k = (searchFromHash.get("kind") || searchFromPath.get("kind")) as PetKind | null;
     if (k) setKind(k);
-    if (params.get("follow") === "1") setFollowCursor(true);
+    if (searchFromHash.get("follow") === "1" || searchFromPath.get("follow") === "1") {
+      setFollowCursor(true);
+    }
 
     // Make body fully transparent for Electron transparent window
     document.documentElement.style.background = "transparent";
