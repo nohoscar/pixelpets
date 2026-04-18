@@ -50,51 +50,27 @@ jobs:
       - name: Build pet overlay bundle
         run: npx vite build --config electron/vite.pet.config.ts
 
+      - name: Build panel bundle
+        run: npx vite build --config electron/vite.panel.config.ts
+
       - name: Prepare Electron app
         shell: bash
         run: |
           rm -rf electron-package
           mkdir -p electron-package/pet-dist
+          mkdir -p electron-package/panel-dist
 
           # Copy Electron files
           cp electron/main.cjs electron-package/
+          cp electron/preload.cjs electron-package/
           cp electron/pet.html electron-package/
           cp electron/package.json electron-package/
 
-          # Copy the pet overlay bundle (built by vite.pet.config.ts)
+          # Copy the pet overlay bundle
           cp electron/pet-dist/pet-bundle.js electron-package/pet-dist/
 
-          # The panel window needs the built React app.
-          mkdir -p electron-package/dist/client
-
-          # Copy built client assets
-          if [ -d "dist/client" ]; then
-            cp -R dist/client/* electron-package/dist/client/ 2>/dev/null || true
-          fi
-
-          # Find the main JS and CSS bundles
-          MAIN_JS=$(ls dist/client/assets/index-*.js 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
-          MAIN_CSS=$(ls dist/client/assets/styles-*.css 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
-
-          # Generate index.html for the Electron panel window
-          cat > electron-package/dist/client/index.html << HTMLEOF
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>PixelPets</title>
-            <link rel="preconnect" href="https://fonts.googleapis.com" />
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;700&display=swap" />
-            ${MAIN_CSS:+<link rel="stylesheet" href="./assets/$MAIN_CSS" />}
-          </head>
-          <body>
-            <div id="root"></div>
-            ${MAIN_JS:+<script type="module" src="./assets/$MAIN_JS"></script>}
-          </body>
-          </html>
-          HTMLEOF
+          # Copy the panel build
+          cp -R electron/panel-dist/* electron-package/panel-dist/
 
       - name: Package Electron app
         run: |
