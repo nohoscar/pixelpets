@@ -14,9 +14,11 @@
       position: fixed;
       inset: 0;
       background: transparent;
+      will-change: transform;
+      contain: layout style;
     }
     /* Pet needs pointer-events for drag/click */
-    .pointer-events-auto { pointer-events: auto; }
+    .pointer-events-auto { pointer-events: auto; will-change: transform; }
     .pointer-events-none { pointer-events: none; }
     .absolute { position: absolute; }
     .fixed { position: fixed; }

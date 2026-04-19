@@ -92,15 +92,20 @@ export function useSystemAwareness(): SystemAwareness {
     return () => { mounted = false; };
   }, []);
 
-  // Idle detection
+  // Idle detection — check every 3s, only update state when value changes
   useEffect(() => {
     let last = Date.now();
-    const reset = () => { last = Date.now(); setIdleSeconds(0); };
+    const reset = () => { last = Date.now(); };
     const events: (keyof WindowEventMap)[] = ["mousemove", "mousedown", "keydown", "wheel", "touchstart"];
     events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    let prevSeconds = 0;
     const t = setInterval(() => {
-      setIdleSeconds(Math.floor((Date.now() - last) / 1000));
-    }, 1000);
+      const seconds = Math.floor((Date.now() - last) / 1000);
+      if (seconds !== prevSeconds) {
+        prevSeconds = seconds;
+        setIdleSeconds(seconds);
+      }
+    }, 3000);
     return () => {
       events.forEach((e) => window.removeEventListener(e, reset));
       clearInterval(t);

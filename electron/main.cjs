@@ -295,27 +295,20 @@ app.whenReady().then(() => {
   // Send initial state after windows load
   setTimeout(sendBattery, 3000);
 
-  // Music detection — scan window titles for Spotify/YouTube/music apps
+  // Music detection — check if music process names exist (cheaper than getting all window titles)
   let lastMusicState = false;
-  const musicKeywords = [
-    "spotify", "youtube", "music", "soundcloud", "deezer",
-    "apple music", "tidal", "pandora", "amazon music",
-    "vlc", "foobar", "winamp", "itunes",
-  ];
+  const musicProcessNames = ["spotify", "vlc", "foobar2000", "itunes", "musicbee", "winamp", "tidal"];
   const checkMusic = () => {
     try {
-      const windows = BrowserWindow.getAllWindows();
-      // Check all Electron windows (won't catch external apps)
-      // For external apps, we use a PowerShell command on Windows
       if (process.platform === "win32") {
         const { execSync } = require("child_process");
         try {
+          const processFilter = musicProcessNames.map((p) => `Name='${p}'`).join(" OR ");
           const output = execSync(
-            'powershell -Command "Get-Process | Where-Object {$_.MainWindowTitle -ne \'\'} | Select-Object -ExpandProperty MainWindowTitle"',
+            `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"${processFilter}\\" | Select-Object -First 1 -ExpandProperty Name"`,
             { encoding: "utf8", timeout: 3000, stdio: ["pipe", "pipe", "ignore"] }
           );
-          const titles = output.toLowerCase();
-          const isPlaying = musicKeywords.some((kw) => titles.includes(kw));
+          const isPlaying = output.trim().length > 0;
           if (isPlaying !== lastMusicState) {
             lastMusicState = isPlaying;
             const info = { musicDetected: isPlaying };
@@ -323,14 +316,20 @@ app.whenReady().then(() => {
             if (panelWindow) panelWindow.webContents.send("music-update", info);
           }
         } catch {
-          // PowerShell failed, skip this tick
+          // PowerShell failed or no music process found
+          if (lastMusicState) {
+            lastMusicState = false;
+            const info = { musicDetected: false };
+            if (petWindow) petWindow.webContents.send("music-update", info);
+            if (panelWindow) panelWindow.webContents.send("music-update", info);
+          }
         }
       }
     } catch {}
   };
-  // Check every 5 seconds
-  setInterval(checkMusic, 5000);
-  setTimeout(checkMusic, 5000);
+  // Check every 15 seconds (reduced from 5s)
+  setInterval(checkMusic, 15000);
+  setTimeout(checkMusic, 15000);
 
   // --- Notification Reminders ---
   let lastInteractionTime = Date.now();
@@ -352,7 +351,7 @@ app.whenReady().then(() => {
     ipcMain.on(channel + "-activity", () => { lastInteractionTime = Date.now(); });
   });
 
-  // Check every 30 minutes for idle notification
+  // Check every 60 minutes for idle notification (reduced from 30 min)
   setInterval(() => {
     const idleMinutes = (Date.now() - lastInteractionTime) / 60000;
     if (idleMinutes > 20 && Notification.isSupported()) {
@@ -374,7 +373,7 @@ app.whenReady().then(() => {
       });
       notification.show();
     }
-  }, 30 * 60 * 1000); // 30 minutes
+  }, 60 * 60 * 1000); // 60 minutes
 });
 
 // Keep app alive on macOS even if all windows close.

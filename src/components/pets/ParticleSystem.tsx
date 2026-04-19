@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 
 export interface ParticleConfig {
   type: "stars" | "food" | "confetti";
@@ -25,11 +25,14 @@ const COLORS = {
   confetti: ["#ff69b4", "#00ff88", "#00bfff", "#ffd700", "#ff4500", "#9b59b6", "#1abc9c"],
 };
 
+const MAX_ACTIVE_PARTICLES = 20;
+
 function generateParticles(config: ParticleConfig): Particle[] {
   const particles: Particle[] = [];
   const colors = COLORS[config.type];
-  for (let i = 0; i < config.count; i++) {
-    const angle = (Math.PI * 2 * i) / config.count + (Math.random() - 0.5) * 0.5;
+  const count = Math.min(config.count, MAX_ACTIVE_PARTICLES);
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
     const speed = 20 + Math.random() * 30;
     particles.push({
       id: `${config.type}-${Date.now()}-${i}`,
@@ -46,26 +49,45 @@ function generateParticles(config: ParticleConfig): Particle[] {
   return particles;
 }
 
-function StarSvg({ color, size }: { color: string; size: number }) {
-  return (
-    <svg width={size * 2} height={size * 2} viewBox="0 0 10 10">
-      <polygon
-        points="5,0 6.2,3.5 10,3.8 7.2,6.2 8,10 5,7.8 2,10 2.8,6.2 0,3.8 3.8,3.5"
-        fill={color}
-      />
-    </svg>
-  );
+// CSS-only particle styles injected once
+const STYLE_ID = "particle-system-styles";
+function ensureStyles() {
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent = `
+    .particle-item {
+      position: absolute;
+      pointer-events: none;
+      will-change: transform, opacity;
+      animation-fill-mode: forwards;
+    }
+    @keyframes particle-burst {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--pdx), var(--pdy)) scale(0.3); opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
 }
 
-function FoodSvg({ color, size }: { color: string; size: number }) {
-  return (
-    <svg width={size * 2} height={size * 2} viewBox="0 0 10 10">
-      <circle cx="5" cy="5" r="4" fill={color} />
-    </svg>
-  );
-}
-
-function ConfettiSvg({ color, size }: { color: string; size: number }) {
+function ParticleSvg({ type, color, size }: { type: string; color: string; size: number }) {
+  if (type === "stars") {
+    return (
+      <svg width={size * 2} height={size * 2} viewBox="0 0 10 10">
+        <polygon
+          points="5,0 6.2,3.5 10,3.8 7.2,6.2 8,10 5,7.8 2,10 2.8,6.2 0,3.8 3.8,3.5"
+          fill={color}
+        />
+      </svg>
+    );
+  }
+  if (type === "food") {
+    return (
+      <svg width={size * 2} height={size * 2} viewBox="0 0 10 10">
+        <circle cx="5" cy="5" r="4" fill={color} />
+      </svg>
+    );
+  }
   return (
     <svg width={size * 2} height={size * 2} viewBox="0 0 10 10">
       <rect x="2" y="2" width="6" height="6" rx="1" fill={color} transform={`rotate(${Math.random() * 360} 5 5)`} />
@@ -74,48 +96,54 @@ function ConfettiSvg({ color, size }: { color: string; size: number }) {
 }
 
 export function ParticleSystem({ particles: configs }: { particles: ParticleConfig[] }) {
-  const [activeParticles, setActiveParticles] = useState<Particle[]>([]);
   const prevLengthRef = useRef(0);
+  const activeRef = useRef<Particle[]>([]);
 
-  useEffect(() => {
+  // Ensure CSS is injected
+  useEffect(() => { ensureStyles(); }, []);
+
+  // Generate particles only when new configs are added
+  const currentParticles = useMemo(() => {
     if (configs.length > prevLengthRef.current) {
-      // New config added
       const newConfig = configs[configs.length - 1];
       const newParticles = generateParticles(newConfig);
-      setActiveParticles((prev) => [...prev, ...newParticles]);
-
-      // Remove after duration
-      setTimeout(() => {
-        setActiveParticles((prev) =>
-          prev.filter((p) => !newParticles.some((np) => np.id === p.id))
-        );
-      }, newConfig.duration);
+      // Enforce max particle limit
+      const combined = [...activeRef.current, ...newParticles];
+      activeRef.current = combined.slice(-MAX_ACTIVE_PARTICLES);
     }
     prevLengthRef.current = configs.length;
+    return activeRef.current;
   }, [configs]);
 
-  if (activeParticles.length === 0) return null;
+  // Clean up expired particles via timeout (no DOM removal, CSS handles opacity: 0)
+  useEffect(() => {
+    if (configs.length === 0) return;
+    const lastConfig = configs[configs.length - 1];
+    const timer = setTimeout(() => {
+      activeRef.current = [];
+    }, lastConfig.duration + 50);
+    return () => clearTimeout(timer);
+  }, [configs.length]);
+
+  if (currentParticles.length === 0) return null;
 
   return (
     <>
-      {activeParticles.map((p) => {
-        const ParticleSvg = p.type === "stars" ? StarSvg : p.type === "food" ? FoodSvg : ConfettiSvg;
-        return (
-          <div
-            key={p.id}
-            className="absolute pointer-events-none"
-            style={{
-              left: p.x,
-              top: p.y,
-              animation: `particle-fly ${p.duration}ms ease-out forwards`,
-              ["--dx" as string]: `${p.dx}px`,
-              ["--dy" as string]: `${p.dy}px`,
-            }}
-          >
-            <ParticleSvg color={p.color} size={p.size} />
-          </div>
-        );
-      })}
+      {currentParticles.map((p) => (
+        <div
+          key={p.id}
+          className="particle-item"
+          style={{
+            left: p.x,
+            top: p.y,
+            ["--pdx" as string]: `${p.dx}px`,
+            ["--pdy" as string]: `${p.dy}px`,
+            animation: `particle-burst ${p.duration}ms ease-out forwards`,
+          }}
+        >
+          <ParticleSvg type={p.type} color={p.color} size={p.size} />
+        </div>
+      ))}
     </>
   );
 }

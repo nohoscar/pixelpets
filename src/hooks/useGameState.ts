@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, type MutableRefObject } from "react";
+import { useState, useCallback, useRef, useEffect, type MutableRefObject } from "react";
 
 // --- Types ---
 
@@ -141,10 +141,36 @@ export function useGameState(): GameState {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // Debounced localStorage writes: batch mutations and write at most once every 2 seconds
+  const writeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingWriteRef = useRef<PersistedGameState | null>(null);
+
+  const flushToStorage = useCallback(() => {
+    if (pendingWriteRef.current) {
+      writeToStorage(pendingWriteRef.current);
+      pendingWriteRef.current = null;
+    }
+    writeTimerRef.current = null;
+  }, []);
+
+  // Flush on unmount
+  useEffect(() => {
+    return () => {
+      if (writeTimerRef.current) {
+        clearTimeout(writeTimerRef.current);
+        flushToStorage();
+      }
+    };
+  }, [flushToStorage]);
+
   const persist = useCallback((next: PersistedGameState) => {
     setState(next);
-    writeToStorage(next);
-  }, []);
+    // Queue write — accumulate in memory, flush every 2 seconds
+    pendingWriteRef.current = next;
+    if (!writeTimerRef.current) {
+      writeTimerRef.current = setTimeout(flushToStorage, 2000);
+    }
+  }, [flushToStorage]);
 
   const addXp = useCallback((amount: number) => {
     const prev = stateRef.current;
@@ -233,8 +259,9 @@ export function useGameState(): GameState {
     persist({ ...prev, petXpHistory: { ...prev.petXpHistory, [kind]: current + amount } });
   }, [persist]);
 
-  // Achievement checking — runs on every persist
+  // Achievement checking — debounced, runs at most once per 2 seconds after state changes
   const achievementCallbackRef = useRef<((name: string, icon: string) => void) | null>(null);
+  const achievementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkAchievements = useCallback((state: PersistedGameState) => {
     for (const ach of ACHIEVEMENTS) {
@@ -250,12 +277,15 @@ export function useGameState(): GameState {
     }
   }, [persist]);
 
-  // Check achievements after state changes
+  // Check achievements after state changes — debounced to avoid running on every mutation
   const prevStateRef = useRef(state);
   if (prevStateRef.current !== state) {
     prevStateRef.current = state;
-    // Defer to avoid calling persist during render
-    setTimeout(() => checkAchievements(stateRef.current), 0);
+    if (achievementTimerRef.current) clearTimeout(achievementTimerRef.current);
+    achievementTimerRef.current = setTimeout(() => {
+      achievementTimerRef.current = null;
+      checkAchievements(stateRef.current);
+    }, 2000);
   }
 
   return {

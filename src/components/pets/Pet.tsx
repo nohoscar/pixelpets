@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { PETS, type PetKind } from "./petSprites";
 import { randomThought, moodThought } from "./petThoughts";
 import { playSound } from "@/lib/audio";
@@ -51,10 +51,12 @@ export function Pet({
   const def = PETS[kind];
   const size = def.size;
 
-  const [pos, setPos] = useState(() => ({
+  // Use ref for position tracking in animation loop — only sync to state every 100ms
+  const internalPosRef = useRef({
     x: initialX ?? Math.random() * (window.innerWidth - size - 40) + 20,
     y: initialY ?? Math.random() * (window.innerHeight - size - 200) + 120,
-  }));
+  });
+  const [pos, setPos] = useState(() => ({ ...internalPosRef.current }));
   const [facing, setFacing] = useState<"left" | "right">("right");
   const [state, setState] = useState<PetState>("walk");
   const [step, setStep] = useState(0);
@@ -71,11 +73,35 @@ export function Pet({
   posRef.current = pos;
   const dragOffsetRef = useRef<{ dx: number; dy: number } | null>(null);
 
-  // Notify parent when stats change
-  useEffect(() => { onStatsChange?.(stats); }, [stats, onStatsChange]);
+  // Sync internal position ref to render state every 100ms
+  useEffect(() => {
+    const syncTimer = setInterval(() => {
+      const cur = internalPosRef.current;
+      const rendered = posRef.current;
+      if (Math.abs(cur.x - rendered.x) > 0.5 || Math.abs(cur.y - rendered.y) > 0.5) {
+        setPos({ ...cur });
+      }
+    }, 100);
+    return () => clearInterval(syncTimer);
+  }, []);
 
-  // Notify parent of position changes for interaction detection
-  useEffect(() => { onPositionChange?.(pos); }, [pos, onPositionChange]);
+  // Debounced onStatsChange — only report every 2 seconds
+  const lastStatsReportRef = useRef(0);
+  useEffect(() => {
+    const now = Date.now();
+    if (now - lastStatsReportRef.current < 2000) return;
+    lastStatsReportRef.current = now;
+    onStatsChange?.(stats);
+  }, [stats, onStatsChange]);
+
+  // Debounced onPositionChange — only report every 500ms
+  const lastPosReportRef = useRef(0);
+  useEffect(() => {
+    const now = Date.now();
+    if (now - lastPosReportRef.current < 500) return;
+    lastPosReportRef.current = now;
+    onPositionChange?.(pos);
+  }, [pos, onPositionChange]);
 
   // Personality modifiers
   const personality = getPersonality(kind);
@@ -128,11 +154,11 @@ export function Pet({
   }, [cursorRef, followCursor, size]);
 
   useEffect(() => {
-    const id = setInterval(() => setStep((s) => s + 1), 180);
+    const id = setInterval(() => setStep((s) => s + 1), 250);
     return () => clearInterval(id);
   }, []);
 
-  // Movement loop
+  // Movement loop — uses ref for position, only syncs to state via the 100ms timer
   useEffect(() => {
     let raf = 0;
     const tick = () => {
@@ -145,16 +171,15 @@ export function Pet({
       if (target) {
         const speedBase = 1.4;
         const speed = stats.energy < 20 ? speedBase * 0.4 : speedBase;
-        const cx = posRef.current.x + size / 2;
-        const cy = posRef.current.y + size / 2;
+        const cx = internalPosRef.current.x + size / 2;
+        const cy = internalPosRef.current.y + size / 2;
         const dx = target.x - cx;
         const dy = target.y - cy;
         const dist = Math.hypot(dx, dy);
         if (dist > 6) {
-          setPos({
-            x: posRef.current.x + (dx / dist) * speed,
-            y: posRef.current.y + (dy / dist) * speed,
-          });
+          const newX = internalPosRef.current.x + (dx / dist) * speed;
+          const newY = internalPosRef.current.y + (dy / dist) * speed;
+          internalPosRef.current = { x: newX, y: newY };
           setFacing(dx > 0 ? "right" : "left");
         }
       }
@@ -170,7 +195,9 @@ export function Pet({
     const move = (e: MouseEvent) => {
       const off = dragOffsetRef.current;
       if (!off) return;
-      setPos({ x: e.clientX - off.dx, y: e.clientY - off.dy });
+      const newPos = { x: e.clientX - off.dx, y: e.clientY - off.dy };
+      internalPosRef.current = newPos;
+      setPos(newPos);
     };
     const up = () => {
       setState("walk");
@@ -535,10 +562,12 @@ export function Pet({
     // If dragging, follow touch
     if (touchDraggingRef.current && dragOffsetRef.current) {
       e.preventDefault();
-      setPos({
+      const newPos = {
         x: touch.clientX - dragOffsetRef.current.dx,
         y: touch.clientY - dragOffsetRef.current.dy,
-      });
+      };
+      internalPosRef.current = newPos;
+      setPos(newPos);
     }
   };
 
@@ -626,6 +655,9 @@ export function Pet({
   const isFainted = state === "faint";
   const evolution = gameState ? getEvolution(kind, gameState.level) : null;
 
+  // Memoize sprite render to avoid re-rendering SVG on every frame
+  const spriteElement = useMemo(() => def.render(facing, step), [def, facing, step]);
+
   return (
     <div
       className="absolute select-none pointer-events-auto"
@@ -635,6 +667,7 @@ export function Pet({
         width: size,
         height: size,
         zIndex: 30,
+        willChange: "transform, left, top",
         cursor: state === "drag" ? "grabbing" : "grab",
         transition: state === "jump" || isFainted ? "transform 0.5s cubic-bezier(.5,-0.5,.5,1.5)" : undefined,
         transform: state === "jump"
@@ -687,7 +720,7 @@ export function Pet({
           : state === "idle" || state === "sleep" ? "animate-bob w-full h-full" : "w-full h-full"
         }`
       }>
-        {def.render(facing, step)}
+        {spriteElement}
       </div>
       {/* Accessory overlay (task 2.8) */}
       {gameState && (
