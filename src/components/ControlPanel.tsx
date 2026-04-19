@@ -7,6 +7,12 @@ import { PomodoroTimer } from "./PomodoroTimer";
 import { useI18n } from "@/lib/i18n";
 import { THEMES, applyTheme, type ThemeId } from "@/lib/themes";
 
+// Web demo limitations
+const isWebDemo = typeof window !== "undefined" && !(window as any).pixelpets;
+const FREE_PETS: PetKind[] = ["cat", "dog", "slime", "dragon", "ghost"];
+const FREE_GAMES = ["catch", "memory"];
+const FREE_CURSORS: CursorKind[] = ["default", "csgo", "valorant", "bow", "sniper"];
+
 interface Props {
   cursor: CursorKind;
   onCursor: (c: CursorKind) => void;
@@ -148,11 +154,18 @@ export function ControlPanel({
         <div className="grid grid-cols-5 gap-2 max-h-80 overflow-y-auto pr-1">
           {PET_LIST.map((k) => {
             const def = PETS[k];
+            const isLocked = isWebDemo && !FREE_PETS.includes(k);
             return (
-              <button key={k} onClick={() => onAddPet(k)}
-                className="group relative aspect-square rounded-lg border border-border bg-secondary/40 hover:border-neon hover:bg-neon/5 hover:shadow-[0_0_12px_color-mix(in_oklab,var(--neon)_30%,transparent)] transition-all p-1 flex flex-col items-center justify-center"
-                title={def.name}>
+              <button key={k} onClick={() => !isLocked && onAddPet(k)}
+                disabled={isLocked}
+                className={`group relative aspect-square rounded-lg border transition-all p-1 flex flex-col items-center justify-center ${
+                  isLocked
+                    ? "border-border bg-secondary/20 opacity-30 grayscale cursor-not-allowed"
+                    : "border-border bg-secondary/40 hover:border-neon hover:bg-neon/5 hover:shadow-[0_0_12px_color-mix(in_oklab,var(--neon)_30%,transparent)]"
+                }`}
+                title={isLocked ? "🔒 Desktop app only" : def.name}>
                 <div className="w-10 h-10">{def.render("right", 0)}</div>
+                {isLocked && <span className="absolute top-0.5 right-0.5 text-[8px]">🔒</span>}
                 <span className="absolute bottom-0 left-0 right-0 text-[6px] font-display text-center text-muted-foreground group-hover:text-neon truncate px-0.5">{def.name}</span>
               </button>
             );
@@ -206,27 +219,32 @@ export function ControlPanel({
         <section className="mb-4">
           <h2 className="font-display text-[10px] text-neon-pink mb-2">{t("control.minigames")}</h2>
           <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => onStartGame("catch")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
-              <span className="text-lg">🎯</span><span>CATCH</span>
-            </button>
-            <button onClick={() => onStartGame("memory")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
-              <span className="text-lg">🧠</span><span>MEMORY</span>
-            </button>
-            <button onClick={() => onStartGame("simon")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
-              <span className="text-lg">🎵</span><span>SIMON</span>
-            </button>
-            <button onClick={() => onStartGame("typing")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
-              <span className="text-lg">⌨️</span><span>TYPING</span>
-            </button>
-            <button onClick={() => onStartGame("reaction")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
-              <span className="text-lg">⚡</span><span>REACT</span>
-            </button>
-            <button onClick={() => onStartGame("quiz")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
-              <span className="text-lg">❓</span><span>QUIZ</span>
-            </button>
-            <button onClick={() => onStartGame("dodge")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
-              <span className="text-lg">🏃</span><span>DODGE</span>
-            </button>
+            {([
+              { id: "catch", icon: "🎯", label: "CATCH" },
+              { id: "memory", icon: "🧠", label: "MEMORY" },
+              { id: "simon", icon: "🎵", label: "SIMON" },
+              { id: "typing", icon: "⌨️", label: "TYPING" },
+              { id: "reaction", icon: "⚡", label: "REACT" },
+              { id: "quiz", icon: "❓", label: "QUIZ" },
+              { id: "dodge", icon: "🏃", label: "DODGE" },
+            ] as const).map((game) => {
+              const isLocked = isWebDemo && !FREE_GAMES.includes(game.id);
+              return (
+                <button key={game.id}
+                  onClick={() => !isLocked && onStartGame(game.id)}
+                  disabled={isLocked}
+                  className={`relative px-2 py-3 rounded-md border transition-all font-display text-[9px] flex flex-col items-center gap-1 ${
+                    isLocked
+                      ? "border-border bg-secondary/20 opacity-30 grayscale cursor-not-allowed"
+                      : "border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent"
+                  }`}
+                  title={isLocked ? "🔒 Desktop app only" : game.label}>
+                  <span className="text-lg">{game.icon}</span>
+                  <span>{game.label}</span>
+                  {isLocked && <span className="absolute top-0.5 right-0.5 text-[8px]">🔒</span>}
+                </button>
+              );
+            })}
           </div>
         </section>
       )}
@@ -281,11 +299,20 @@ export function ControlPanel({
           {(Object.keys(CURSORS) as CursorKind[]).map((k) => {
             const active = cursor === k;
             const preview = CURSOR_PREVIEWS[k];
+            const isLocked = isWebDemo && !FREE_CURSORS.includes(k);
             return (
-              <button key={k} onClick={() => onCursor(k)}
-                className={`relative aspect-square rounded-lg border transition-all flex items-center justify-center group ${active ? "border-primary bg-primary/10 shadow-[0_0_12px_var(--primary)]" : "border-border bg-secondary/30 hover:border-primary/60"}`}
-                title={CURSORS[k].sub}>
+              <button key={k} onClick={() => !isLocked && onCursor(k)}
+                disabled={isLocked}
+                className={`relative aspect-square rounded-lg border transition-all flex items-center justify-center group ${
+                  isLocked
+                    ? "border-border bg-secondary/20 opacity-30 grayscale cursor-not-allowed"
+                    : active
+                      ? "border-primary bg-primary/10 shadow-[0_0_12px_var(--primary)]"
+                      : "border-border bg-secondary/30 hover:border-primary/60"
+                }`}
+                title={isLocked ? "🔒 Desktop app only" : CURSORS[k].sub}>
                 {preview ? <div className="w-6 h-6" dangerouslySetInnerHTML={{ __html: preview }} /> : <span className="text-lg">↖</span>}
+                {isLocked && <span className="absolute top-0 right-0 text-[7px]">🔒</span>}
                 <span className="absolute -bottom-4 left-0 right-0 text-[7px] font-display text-center text-muted-foreground group-hover:text-foreground truncate">{CURSORS[k].label}</span>
               </button>
             );
