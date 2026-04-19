@@ -1,5 +1,6 @@
 // Standalone entry point for the Electron panel window.
-// Controls only — no pet rendered here. The pet lives in the overlay window.
+// Full-featured control panel — mirrors the web demo but adapted for Electron IPC.
+// The pet itself is NOT rendered here (it lives in the overlay window).
 
 import "../src/styles.css";
 import { createRoot } from "react-dom/client";
@@ -7,9 +8,25 @@ import { useEffect, useState } from "react";
 import { ControlPanel } from "../src/components/ControlPanel";
 import { PETS, type PetKind } from "../src/components/pets/petSprites";
 import { CURSORS, CURSOR_SOUND, type CursorKind } from "../src/components/cursors/cursors";
+import { StatsPanel } from "../src/components/StatsPanel";
 import { VolumeControl } from "../src/components/VolumeControl";
 import { useSystemAwareness } from "../src/hooks/useSystemAwareness";
+import { useGameState } from "../src/hooks/useGameState";
 import { playSound } from "../src/lib/audio";
+import { CatchGame } from "../src/components/games/CatchGame";
+import { MemoryGame } from "../src/components/games/MemoryGame";
+import { SimonGame } from "../src/components/games/SimonGame";
+import { TypingGame } from "../src/components/games/TypingGame";
+import { ReactionGame } from "../src/components/games/ReactionGame";
+import { PetQuizGame } from "../src/components/games/PetQuizGame";
+import { DodgeGame } from "../src/components/games/DodgeGame";
+import { AchievementToast } from "../src/components/AchievementToast";
+import { WidgetPanel } from "../src/components/WidgetPanel";
+import { I18nProvider, useI18n } from "../src/lib/i18n";
+import { Onboarding, useOnboarding } from "../src/components/Onboarding";
+import { applyTheme, type ThemeId } from "../src/lib/themes";
+import { AmbientSound } from "../src/components/AmbientSound";
+import { Leaderboard } from "../src/components/Leaderboard";
 import type { PetStats } from "../src/components/pets/Pet";
 
 declare global {
@@ -24,31 +41,37 @@ declare global {
   }
 }
 
-function StatBar({ label, value, color }: { label: string; value: number; color: string }) {
+function ElectronApp() {
+  const gameState = useGameState();
+  const { showOnboarding, dismissOnboarding } = useOnboarding();
+
+  // Apply persisted theme on mount
+  useEffect(() => {
+    if (gameState.theme && gameState.theme !== "cyberpunk") {
+      applyTheme(gameState.theme as ThemeId);
+    }
+  }, []);
+
   return (
-    <div>
-      <div className="flex justify-between mb-1">
-        <span className="text-[9px] font-display text-muted-foreground">{label}</span>
-        <span className="text-[9px] font-display" style={{ color }}>{Math.round(value)}</span>
-      </div>
-      <div className="h-2 bg-secondary/60 rounded-full overflow-hidden">
-        <div
-          className="h-full transition-all duration-500 rounded-full"
-          style={{ width: `${value}%`, background: color, boxShadow: `0 0 10px ${color}` }}
-        />
-      </div>
-    </div>
+    <I18nProvider initialLocale={gameState.locale}>
+      {showOnboarding && <Onboarding onDismiss={dismissOnboarding} />}
+      <AmbientSound soundId={gameState.ambientSound} />
+      <ElectronPanel gameState={gameState} />
+    </I18nProvider>
   );
 }
 
-function DesktopPanel() {
+function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameState> }) {
   const [currentKind, setCurrentKind] = useState<PetKind>("cat");
   const [cursor, setCursor] = useState<CursorKind>("csgo");
   const [followCursor, setFollowCursor] = useState(false);
-  const [stats, setStats] = useState<PetStats>({ hunger: 80, happiness: 80, energy: 80, xp: 0, level: 1 });
+  const [stats, setStats] = useState<PetStats | null>(null);
+  const [activeGame, setActiveGame] = useState<"catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | null>(null);
+  const [achievementToast, setAchievementToast] = useState<{ name: string; icon: string } | null>(null);
   const awareness = useSystemAwareness();
+  const { t } = useI18n();
 
-  // Listen for stats updates from the pet overlay
+  // Listen for stats updates from the pet overlay via IPC
   useEffect(() => {
     window.pixelpets?.onStatsUpdate?.((s) => setStats(s));
   }, []);
@@ -64,39 +87,158 @@ function DesktopPanel() {
     const sound = CURSOR_SOUND[cursor];
     if (!sound) return;
     const handler = (e: MouseEvent) => {
-      const t = e.target as HTMLElement;
-      if (t.closest("button, a, input, label")) return;
+      const target = e.target as HTMLElement;
+      if (target.closest("button, a, input, label")) return;
       playSound(sound as Parameters<typeof playSound>[0]);
     };
     window.addEventListener("mousedown", handler);
     return () => window.removeEventListener("mousedown", handler);
   }, [cursor]);
 
+  // Mini-game handlers
+  const handleCatchComplete = (score: number) => {
+    const xp = Math.min(50, Math.max(10, score * 3));
+    gameState.addXp(xp);
+    gameState.addPetXp(currentKind, xp);
+    gameState.incrementGamesPlayed("catch");
+    setActiveGame(null);
+  };
+
+  const handleMemoryComplete = (attempts: number) => {
+    const xp = attempts < 10 ? 50 : attempts <= 15 ? 30 : 15;
+    gameState.addXp(xp);
+    gameState.addPetXp(currentKind, xp);
+    gameState.incrementGamesPlayed("memory");
+    setActiveGame(null);
+  };
+
+  const handleSimonComplete = (rounds: number) => {
+    const xp = Math.min(50, rounds * 5);
+    gameState.addXp(xp);
+    gameState.addPetXp(currentKind, xp);
+    gameState.incrementGamesPlayed("simon");
+    setActiveGame(null);
+  };
+
+  const handleTypingComplete = (score: number) => {
+    const xp = Math.min(50, score * 8);
+    gameState.addXp(xp);
+    gameState.addPetXp(currentKind, xp);
+    gameState.incrementGamesPlayed("typing");
+    setActiveGame(null);
+  };
+
+  const handleReactionComplete = (avgMs: number) => {
+    const xp = avgMs < 300 ? 50 : avgMs < 500 ? 30 : 15;
+    gameState.addXp(xp);
+    gameState.addPetXp(currentKind, xp);
+    gameState.incrementGamesPlayed("reaction");
+    setActiveGame(null);
+  };
+
+  const handleQuizComplete = (correct: number) => {
+    const xp = Math.min(50, correct * 5);
+    gameState.addXp(xp);
+    gameState.addPetXp(currentKind, xp);
+    gameState.incrementGamesPlayed("quiz");
+    setActiveGame(null);
+  };
+
+  const handleDodgeComplete = (score: number) => {
+    const xp = Math.min(50, score * 2);
+    gameState.addXp(xp);
+    gameState.addPetXp(currentKind, xp);
+    gameState.incrementGamesPlayed("dodge");
+    setActiveGame(null);
+  };
+
+  const handleGameCancel = () => {
+    setActiveGame(null);
+  };
+
+  // Achievement toast handler
+  const showAchievementToast = (name: string, icon: string) => {
+    setAchievementToast({ name, icon });
+    setTimeout(() => setAchievementToast(null), 3000);
+  };
+
+  // Wire achievement callback to toast
+  useEffect(() => {
+    gameState.achievementCallbackRef.current = showAchievementToast;
+    return () => { gameState.achievementCallbackRef.current = null; };
+  });
+
+  // Pomodoro callbacks — send speech to pet overlay via IPC
+  const handlePomodoroWorkEnd = () => {
+    window.pixelpets?.petAction("pomodoroWorkEnd");
+  };
+  const handlePomodoroBreakEnd = () => {
+    window.pixelpets?.petAction("pomodoroBreakEnd");
+  };
+
+  // IPC wrappers
   const setPet = (kind: PetKind) => {
     setCurrentKind(kind);
     window.pixelpets?.setPet(kind);
   };
 
-  const currentPetName = PETS[currentKind].name;
-
-  const TOD_LABEL: Record<string, { icon: string; text: string }> = {
-    morning: { icon: "🌅", text: "MAÑANA" },
-    day:     { icon: "☀️", text: "DÍA" },
-    evening: { icon: "🌆", text: "TARDE" },
-    night:   { icon: "🌙", text: "NOCHE" },
+  const handleFeed = () => {
+    window.pixelpets?.petAction("feed");
+    gameState.incrementFeedCount();
+    gameState.addXp(5);
+    gameState.addPetXp(currentKind, 5);
   };
-  const battPct = awareness.batteryLevel != null ? Math.round(awareness.batteryLevel * 100) : null;
-  const tod = TOD_LABEL[awareness.timeOfDay];
+
+  const handlePlay = () => {
+    window.pixelpets?.petAction("play");
+    gameState.incrementPlayCount();
+    gameState.addXp(5);
+    gameState.addPetXp(currentKind, 5);
+  };
+
+  const handleSleep = () => {
+    window.pixelpets?.petAction("sleep");
+  };
+
+  const currentPetName = gameState.petNames[currentKind] || PETS[currentKind].name;
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden">
+      {/* Mini-game overlays */}
+      {activeGame === "catch" && (
+        <CatchGame onComplete={handleCatchComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "memory" && (
+        <MemoryGame onComplete={handleMemoryComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "simon" && (
+        <SimonGame onComplete={handleSimonComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "typing" && (
+        <TypingGame onComplete={handleTypingComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "reaction" && (
+        <ReactionGame onComplete={handleReactionComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "quiz" && (
+        <PetQuizGame onComplete={handleQuizComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "dodge" && (
+        <DodgeGame onComplete={handleDodgeComplete} onCancel={handleGameCancel} />
+      )}
+
+      {/* Achievement toast */}
+      {achievementToast && (
+        <AchievementToast name={achievementToast.name} icon={achievementToast.icon} />
+      )}
+
+      {/* UI layer */}
       <div className="relative z-10 min-h-screen p-4 md:p-8 grid md:grid-cols-[auto_1fr] gap-6 items-start">
         <div className="w-full max-w-sm flex flex-col gap-4">
           <ControlPanel
             cursor={cursor}
             onCursor={(c) => {
               setCursor(c);
-              // Apply cursor at Windows system level
               window.pixelpets?.setCursor(c);
             }}
             followCursor={followCursor}
@@ -107,81 +249,53 @@ function DesktopPanel() {
             petCount={1}
             onAddPet={setPet}
             onClearPets={() => {}}
+            gameState={gameState}
+            onStartGame={setActiveGame}
+            onAchievementUnlock={showAchievementToast}
+            onPomodoroWorkEnd={handlePomodoroWorkEnd}
+            onPomodoroBreakEnd={handlePomodoroBreakEnd}
+            activePetKind={currentKind}
+            petName={gameState.petNames[currentKind] ?? ""}
+            onPetNameChange={(name) => gameState.setPetName(currentKind, name)}
           />
 
           {/* Stats panel — reads from overlay via IPC */}
-          <section className="glass rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display text-[10px] text-neon-pink">
-                {currentPetName.toUpperCase()} · STATS
-              </h2>
-            </div>
-            <div className="space-y-3 mb-4">
-              <StatBar label="HAMBRE" value={stats.hunger} color="hsl(20 90% 60%)" />
-              <StatBar label="FELICIDAD" value={stats.happiness} color="hsl(330 80% 65%)" />
-              <StatBar label="ENERGÍA" value={stats.energy} color="hsl(150 80% 55%)" />
-            </div>
+          <StatsPanel
+            stats={stats}
+            petName={currentPetName}
+            awareness={awareness}
+            onFeed={handleFeed}
+            onPlay={handlePlay}
+            onSleep={handleSleep}
+            gameState={gameState}
+            activePetKind={currentKind}
+          />
 
-            {awareness && (
-              <div className="mb-4 pt-3 border-t border-border/50">
-                <p className="font-display text-[9px] text-neon mb-2">SISTEMA</p>
-                <div className="grid grid-cols-3 gap-2 text-[9px] font-display">
-                  <div className="flex flex-col items-center gap-0.5 p-1.5 rounded-md bg-secondary/30">
-                    <span className="text-base">
-                      {!awareness.hasBattery ? "🖥️"
-                        : awareness.batteryTier === "critical" ? "🪫"
-                        : awareness.batteryCharging ? "⚡" : "🔋"}
-                    </span>
-                    <span className={!awareness.hasBattery ? "text-neon" : awareness.batteryTier === "critical" ? "text-destructive" : "text-muted-foreground"}>
-                      {!awareness.hasBattery ? "PC" : battPct != null ? `${battPct}%` : "—"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-center gap-0.5 p-1.5 rounded-md bg-secondary/30">
-                    <span className="text-base">{awareness.isIdle ? "💤" : "🖱️"}</span>
-                    <span className="text-muted-foreground">
-                      {awareness.isIdle ? "AFK" : `${awareness.idleSeconds}s`}
-                    </span>
-                  </div>
-                  {tod && (
-                    <div className="flex flex-col items-center gap-0.5 p-1.5 rounded-md bg-secondary/30">
-                      <span className="text-base">{tod.icon}</span>
-                      <span className="text-muted-foreground">{tod.text}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+          {/* Leaderboard */}
+          {Object.keys(gameState.petXpHistory).length > 0 && (
+            <Leaderboard gameState={gameState} />
+          )}
 
-            <div className="grid grid-cols-3 gap-2">
-              <button onClick={() => window.pixelpets?.petAction("feed")}
-                className="px-2 py-2 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-0.5">
-                <span className="text-base">🍖</span><span>FEED</span>
-              </button>
-              <button onClick={() => window.pixelpets?.petAction("play")}
-                className="px-2 py-2 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-0.5">
-                <span className="text-base">🎾</span><span>PLAY</span>
-              </button>
-              <button onClick={() => window.pixelpets?.petAction("sleep")}
-                className="px-2 py-2 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-0.5">
-                <span className="text-base">💤</span><span>SLEEP</span>
-              </button>
-            </div>
-          </section>
-
+          <WidgetPanel />
           <VolumeControl />
         </div>
 
-        {/* Hero */}
+        {/* Hero / info section */}
         <section className="hidden md:flex flex-col gap-6 max-w-2xl mx-auto justify-center min-h-[80vh] pointer-events-none">
-          <p className="font-display text-[10px] text-neon-pink animate-flicker">▸ DESKTOP_APP · v2.0</p>
+          <p className="font-display text-[10px] text-neon-pink animate-flicker">
+            {t("hero.tag")}
+          </p>
           <h2 className="font-display text-3xl md:text-5xl leading-tight">
-            <span className="text-neon">Pixel pets</span><br />
-            <span className="text-foreground">para tu</span>{" "}
-            <span className="text-neon-pink">desktop.</span>
+            <span className="text-neon">{t("hero.title1")}</span>
+            <br />
+            <span className="text-foreground">{t("hero.title2")}</span>{" "}
+            <span className="text-neon-pink">{t("hero.title3")}</span>
           </h2>
           <p className="text-sm text-muted-foreground max-w-md">
-            42 mascotas con stats Tamagotchi. Aliméntalas y elige entre 29 cursores con sonidos únicos.
-            La mascota vive en tu escritorio — este panel es solo el control remoto.
+            {t("hero.desc")}
+          </p>
+          <p className="text-[10px] font-display text-muted-foreground mt-8">
+            {t("hero.footer")}
           </p>
         </section>
       </div>
@@ -190,4 +304,4 @@ function DesktopPanel() {
 }
 
 const root = document.getElementById("root");
-if (root) createRoot(root).render(<DesktopPanel />);
+if (root) createRoot(root).render(<ElectronApp />);

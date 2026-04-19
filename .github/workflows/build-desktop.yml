@@ -74,6 +74,14 @@ jobs:
           # Copy the panel build
           cp -R electron/panel-dist/* electron-package/panel-dist/
 
+          # Debug: list what's in the package
+          echo "=== electron-package contents ==="
+          find electron-package -type f | head -20
+          echo "=== pet-dist ==="
+          ls -la electron-package/pet-dist/ || echo "EMPTY"
+          echo "=== panel-dist ==="
+          ls -la electron-package/panel-dist/ || echo "EMPTY"
+
       - name: Package Electron app
         run: |
           npx @electron/packager electron-package "PixelPets" \
