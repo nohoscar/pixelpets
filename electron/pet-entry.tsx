@@ -37,23 +37,39 @@ function PetOverlay() {
   }, []);
 
   // Track mouse position and do hit-testing against the pet element
+  // Track mouse position and do hit-testing with debounce to prevent cursor flickering
   useEffect(() => {
     let lastHit = false;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    
     const handler = (e: MouseEvent) => {
       cursorRef.current = { x: e.clientX, y: e.clientY };
 
-      // Check if mouse is over any pet element (they have pointer-events-auto)
+      // Check if mouse is over any pet element
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const isOverPet = el !== null && el !== document.body && el !== document.documentElement
         && el.id !== "root" && !el.matches("#root");
 
       if (isOverPet !== lastHit) {
-        lastHit = isOverPet;
-        window.pixelpets?.setMouseHit(isOverPet);
+        // Debounce: wait 50ms before changing to avoid rapid flickering
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          // Re-check after debounce
+          const elNow = document.elementFromPoint(e.clientX, e.clientY);
+          const stillOverPet = elNow !== null && elNow !== document.body && elNow !== document.documentElement
+            && elNow.id !== "root" && !elNow.matches("#root");
+          if (stillOverPet !== lastHit) {
+            lastHit = stillOverPet;
+            window.pixelpets?.setMouseHit(stillOverPet);
+          }
+        }, 50);
       }
     };
     window.addEventListener("mousemove", handler);
-    return () => window.removeEventListener("mousemove", handler);
+    return () => {
+      window.removeEventListener("mousemove", handler);
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
   }, []);
 
   // IPC listeners from main process
