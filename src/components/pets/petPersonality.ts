@@ -38,6 +38,17 @@ const PERSONALITIES: Partial<Record<PetKind, Partial<PetPersonality>>> = {
   shoggoth: { clickSound: "pop" },
   blackgoat: { clickSound: "snore" },
   necronomicon: { clickSound: "snore" },
+  // New batch 3
+  hamster: { energyDecay: 1.5, playBonus: 5, clickSound: "pop" },
+  parrot: { happinessDecay: 0.6, clickSound: "happy" },
+  jellyfish: { hungerDecay: 0.7, happinessDecay: 0.7, energyDecay: 0.7, clickSound: "pop" },
+  bat: { energyDecay: 0.5, clickSound: "sad" },
+  crab: { hungerDecay: 0.8, clickSound: "click" },
+  frog: { playBonus: 10, clickSound: "splash" },
+  snail: { hungerDecay: 0.5, happinessDecay: 0.5, energyDecay: 0.5, clickSound: "pop" },
+  firefly: { happinessDecay: 0.5, clickSound: "magic" },
+  octopus: { feedBonus: 10, clickSound: "splash" },
+  phoenix: { sleepRecovery: 2.0, clickSound: "shoot" },
 };
 
 /** Get the personality for a pet kind. Returns full defaults merged with overrides. */

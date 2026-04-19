@@ -11,6 +11,11 @@ import { useGameState } from "@/hooks/useGameState";
 import { playSound } from "@/lib/audio";
 import { CatchGame } from "@/components/games/CatchGame";
 import { MemoryGame } from "@/components/games/MemoryGame";
+import { SimonGame } from "@/components/games/SimonGame";
+import { TypingGame } from "@/components/games/TypingGame";
+import { ReactionGame } from "@/components/games/ReactionGame";
+import { PetQuizGame } from "@/components/games/PetQuizGame";
+import { DodgeGame } from "@/components/games/DodgeGame";
 import { AchievementToast } from "@/components/AchievementToast";
 import { WidgetPanel } from "@/components/WidgetPanel";
 import { I18nProvider, useI18n } from "@/lib/i18n";
@@ -54,7 +59,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const [cursor, setCursor] = useState<CursorKind>("csgo");
   const [followCursor, setFollowCursor] = useState(false);
   const [stats, setStats] = useState<PetStats | null>(null);
-  const [activeGame, setActiveGame] = useState<"catch" | "memory" | null>(null);
+  const [activeGame, setActiveGame] = useState<"catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | null>(null);
   const [achievementToast, setAchievementToast] = useState<{ name: string; icon: string } | null>(null);
   const [activePetId, setActivePetId] = useState<string>("p1");
   const awareness = useSystemAwareness();
@@ -78,6 +83,41 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
     const xp = attempts < 10 ? 50 : attempts <= 15 ? 30 : 15;
     gameState.addXp(xp);
     gameState.incrementGamesPlayed("memory");
+    setActiveGame(null);
+  };
+
+  const handleSimonComplete = (rounds: number) => {
+    const xp = Math.min(50, rounds * 5);
+    gameState.addXp(xp);
+    gameState.incrementGamesPlayed("simon");
+    setActiveGame(null);
+  };
+
+  const handleTypingComplete = (score: number) => {
+    const xp = Math.min(50, score * 8);
+    gameState.addXp(xp);
+    gameState.incrementGamesPlayed("typing");
+    setActiveGame(null);
+  };
+
+  const handleReactionComplete = (avgMs: number) => {
+    const xp = avgMs < 300 ? 50 : avgMs < 500 ? 30 : 15;
+    gameState.addXp(xp);
+    gameState.incrementGamesPlayed("reaction");
+    setActiveGame(null);
+  };
+
+  const handleQuizComplete = (correct: number) => {
+    const xp = Math.min(50, correct * 5);
+    gameState.addXp(xp);
+    gameState.incrementGamesPlayed("quiz");
+    setActiveGame(null);
+  };
+
+  const handleDodgeComplete = (score: number) => {
+    const xp = Math.min(50, score * 2);
+    gameState.addXp(xp);
+    gameState.incrementGamesPlayed("dodge");
     setActiveGame(null);
   };
 
@@ -272,6 +312,21 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
       )}
       {activeGame === "memory" && (
         <MemoryGame onComplete={handleMemoryComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "simon" && (
+        <SimonGame onComplete={handleSimonComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "typing" && (
+        <TypingGame onComplete={handleTypingComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "reaction" && (
+        <ReactionGame onComplete={handleReactionComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "quiz" && (
+        <PetQuizGame onComplete={handleQuizComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "dodge" && (
+        <DodgeGame onComplete={handleDodgeComplete} onCancel={handleGameCancel} />
       )}
 
       {/* Achievement toast */}

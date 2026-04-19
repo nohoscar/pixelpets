@@ -8,7 +8,10 @@ export type CursorKind =
   | "portalgun" | "keyblade" | "masterSword" | "gravityGun" | "bfg"
   | "kar98" | "awp" | "buster" | "gunblade" | "warhammer"
   | "chainsaw" | "plasmaRifle" | "needler" | "crossbow" | "katana"
-  | "shuriken" | "magicWand" | "bomb" | "fishingRod" | "boomerang";
+  | "shuriken" | "magicWand" | "bomb" | "fishingRod" | "boomerang"
+  // New batch 3
+  | "trident" | "scythe" | "staff" | "hammer2" | "dagger"
+  | "shield" | "raygun" | "slingshot" | "nunchaku" | "hookshot";
 
 const enc = (svg: string, hx = 24, hy = 24) =>
   `url('data:image/svg+xml;utf8,${encodeURIComponent(svg)}') ${hx} ${hy}, crosshair`;
@@ -420,6 +423,121 @@ const boomerangSvg = `
   </g>
 </svg>`;
 
+// ---- NEW: Trident (Poseidon) ----
+const tridentSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <rect x="22" y="16" width="4" height="28" fill="#2a8a8a" stroke="#1a5a5a" stroke-width="0.6"/>
+  <polygon points="24,2 26,12 22,12" fill="#40e0d0" stroke="#1a5a5a" stroke-width="0.6"/>
+  <polygon points="16,6 18,14 14,14" fill="#40e0d0" stroke="#1a5a5a" stroke-width="0.6"/>
+  <polygon points="32,6 34,14 30,14" fill="#40e0d0" stroke="#1a5a5a" stroke-width="0.6"/>
+  <rect x="14" y="12" width="20" height="4" rx="1" fill="#2a8a8a" stroke="#1a5a5a" stroke-width="0.6"/>
+  <circle cx="24" cy="14" r="1.5" fill="#80ffff"/>
+</svg>`;
+
+// ---- NEW: Scythe (Grim Reaper) ----
+const scytheSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <line x1="12" y1="6" x2="36" y2="44" stroke="#5a3a1a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M12 6 Q4 4 4 12 Q4 20 14 18 L12 6 Z" fill="#bfbfbf" stroke="#1a1a2e" stroke-width="0.8"/>
+  <path d="M6 8 Q6 16 12 14" fill="none" stroke="#888" stroke-width="0.5"/>
+</svg>`;
+
+// ---- NEW: Staff (Wizard) ----
+const staffSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <radialGradient id="st-orb" cx="0.4" cy="0.4" r="0.5">
+      <stop offset="0" stop-color="#fff"/><stop offset="0.4" stop-color="#cc66ff"/><stop offset="1" stop-color="#6600aa"/>
+    </radialGradient>
+    <filter id="st-glow"><feGaussianBlur stdDeviation="1.5"/></filter>
+  </defs>
+  <line x1="24" y1="14" x2="24" y2="46" stroke="#5a3a1a" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="24" cy="10" r="8" fill="#cc66ff" opacity="0.3" filter="url(#st-glow)"/>
+  <circle cx="24" cy="10" r="5" fill="url(#st-orb)"/>
+  <circle cx="22" cy="8" r="1.5" fill="#fff" opacity="0.8"/>
+</svg>`;
+
+// ---- NEW: Hammer2 (Cartoony Thor) ----
+const hammer2Svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <rect x="20" y="20" width="4" height="24" rx="1" fill="#8B5A2B" stroke="#5a3a1a" stroke-width="0.6"/>
+  <rect x="10" y="6" width="28" height="16" rx="2" fill="#7d8590" stroke="#1a1a2e" stroke-width="0.8"/>
+  <rect x="10" y="6" width="28" height="4" fill="#a5b0bc"/>
+  <rect x="14" y="10" width="4" height="8" fill="#5a6470"/>
+  <rect x="30" y="10" width="4" height="8" fill="#5a6470"/>
+  <circle cx="24" cy="14" r="2" fill="#ffeb3b"/>
+</svg>`;
+
+// ---- NEW: Dagger ----
+const daggerSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <polygon points="24,2 26,4 26,24 22,24 22,4" fill="#e0e6ee" stroke="#1a1a2e" stroke-width="0.6"/>
+  <line x1="24" y1="4" x2="24" y2="22" stroke="#7d8590" stroke-width="0.4"/>
+  <rect x="18" y="24" width="12" height="3" fill="#c9a44a" stroke="#5a3a1a" stroke-width="0.5"/>
+  <rect x="22" y="27" width="4" height="8" fill="#3a2a1a" stroke="#1a1a1a" stroke-width="0.4"/>
+  <circle cx="24" cy="35" r="2" fill="#c9a44a"/>
+</svg>`;
+
+// ---- NEW: Shield ----
+const shieldSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <path d="M24 4 Q40 8 40 20 Q40 36 24 44 Q8 36 8 20 Q8 8 24 4 Z" fill="#3366cc" stroke="#1a1a2e" stroke-width="1.2"/>
+  <path d="M24 8 Q36 12 36 20 Q36 32 24 40 Q12 32 12 20 Q12 12 24 8 Z" fill="#4488ee"/>
+  <polygon points="24,14 28,22 24,20 20,22" fill="#ffd966" stroke="#aa8800" stroke-width="0.5"/>
+  <circle cx="24" cy="28" r="4" fill="#ffd966" stroke="#aa8800" stroke-width="0.5"/>
+</svg>`;
+
+// ---- NEW: Raygun (Retro sci-fi) ----
+const raygunSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="rg-beam" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#33ff66"/><stop offset="1" stop-color="#33ff66" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="22" width="16" height="4" fill="url(#rg-beam)" opacity="0.6"/>
+  <ellipse cx="26" cy="24" rx="10" ry="6" fill="#cc3333" stroke="#660000" stroke-width="0.8"/>
+  <ellipse cx="26" cy="22" rx="8" ry="3" fill="#ff5555"/>
+  <circle cx="18" cy="24" r="3" fill="#33ff66"/>
+  <circle cx="18" cy="24" r="1.5" fill="#fff"/>
+  <rect x="28" y="28" width="6" height="12" rx="1" fill="#880000" stroke="#440000" stroke-width="0.6"/>
+  <polygon points="36,18 42,14 40,20 36,22" fill="#cc3333" stroke="#660000" stroke-width="0.5"/>
+</svg>`;
+
+// ---- NEW: Slingshot ----
+const slingshotSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <line x1="18" y1="6" x2="22" y2="24" stroke="#5a3a1a" stroke-width="3" stroke-linecap="round"/>
+  <line x1="30" y1="6" x2="26" y2="24" stroke="#5a3a1a" stroke-width="3" stroke-linecap="round"/>
+  <rect x="22" y="24" width="4" height="18" fill="#5a3a1a" stroke="#3a2a1a" stroke-width="0.6"/>
+  <path d="M18 6 Q24 12 30 6" fill="none" stroke="#8B5A2B" stroke-width="1.5"/>
+  <circle cx="24" cy="10" r="3" fill="#555" stroke="#333" stroke-width="0.5"/>
+</svg>`;
+
+// ---- NEW: Nunchaku ----
+const nunchakuSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <rect x="10" y="4" width="6" height="20" rx="2" fill="#5a3a1a" stroke="#3a2a1a" stroke-width="0.6"/>
+  <rect x="32" y="24" width="6" height="20" rx="2" fill="#5a3a1a" stroke="#3a2a1a" stroke-width="0.6"/>
+  <path d="M16 10 Q24 16 32 28" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round"/>
+  <rect x="10" y="4" width="6" height="3" fill="#c9a44a"/>
+  <rect x="10" y="21" width="6" height="3" fill="#c9a44a"/>
+  <rect x="32" y="24" width="6" height="3" fill="#c9a44a"/>
+  <rect x="32" y="41" width="6" height="3" fill="#c9a44a"/>
+</svg>`;
+
+// ---- NEW: Hookshot (Zelda) ----
+const hookshotSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <rect x="20" y="20" width="8" height="22" rx="1" fill="#3a3a4a" stroke="#1a1a2e" stroke-width="0.6"/>
+  <rect x="18" y="18" width="12" height="4" fill="#5a5a6a" stroke="#1a1a2e" stroke-width="0.6"/>
+  <line x1="24" y1="18" x2="24" y2="6" stroke="#888" stroke-width="1.5"/>
+  <polygon points="20,6 24,2 28,6" fill="#bfbfbf" stroke="#1a1a2e" stroke-width="0.6"/>
+  <polygon points="18,6 20,2 20,6" fill="#bfbfbf" stroke="#1a1a2e" stroke-width="0.5"/>
+  <polygon points="30,6 28,2 28,6" fill="#bfbfbf" stroke="#1a1a2e" stroke-width="0.5"/>
+  <circle cx="24" cy="30" r="2" fill="#33aaff"/>
+</svg>`;
+
 export const CURSORS: Record<CursorKind, { label: string; value: string; sub: string }> = {
   default:     { label: "Default",    value: "auto",                       sub: "Tu mouse normal" },
   csgo:        { label: "CS:GO",      value: enc(csgoSvg),                 sub: "Crosshair clásico verde" },
@@ -451,6 +569,17 @@ export const CURSORS: Record<CursorKind, { label: string; value: string; sub: st
   bomb:        { label: "Bomb",       value: enc(bombSvg, 24, 28),         sub: "Bomberman 💣" },
   fishingRod:  { label: "Fishing",    value: enc(fishingRodSvg, 36, 6),    sub: "Caña de Animal Crossing" },
   boomerang:   { label: "Boomerang",  value: enc(boomerangSvg, 24, 16),    sub: "Vuelve siempre" },
+  // New batch 3
+  trident:     { label: "Trident",    value: enc(tridentSvg, 24, 4),       sub: "Tridente de Poseidón" },
+  scythe:      { label: "Scythe",     value: enc(scytheSvg, 4, 4),         sub: "Guadaña del segador" },
+  staff:       { label: "Staff",      value: enc(staffSvg, 24, 4),         sub: "Báculo de mago" },
+  hammer2:     { label: "Hammer",     value: enc(hammer2Svg, 24, 8),       sub: "Martillo cartoon" },
+  dagger:      { label: "Dagger",     value: enc(daggerSvg, 24, 4),        sub: "Daga arrojadiza" },
+  shield:      { label: "Shield",     value: enc(shieldSvg, 24, 24),       sub: "Escudo redondo" },
+  raygun:      { label: "Ray Gun",    value: enc(raygunSvg, 4, 24),        sub: "Pistola retro sci-fi" },
+  slingshot:   { label: "Slingshot",  value: enc(slingshotSvg, 24, 6),     sub: "Resortera" },
+  nunchaku:    { label: "Nunchaku",   value: enc(nunchakuSvg, 12, 12),     sub: "Nunchakus" },
+  hookshot:    { label: "Hookshot",   value: enc(hookshotSvg, 24, 4),      sub: "Hookshot de Zelda" },
 };
 
 // Visual preview SVG (for buttons)
@@ -464,6 +593,10 @@ export const CURSOR_PREVIEWS: Record<CursorKind, string> = {
   chainsaw: chainsawSvg, plasmaRifle: plasmaRifleSvg, needler: needlerSvg,
   crossbow: crossbowSvg, katana: katanaSvg, shuriken: shurikenSvg,
   magicWand: magicWandSvg, bomb: bombSvg, fishingRod: fishingRodSvg, boomerang: boomerangSvg,
+  // New batch 3
+  trident: tridentSvg, scythe: scytheSvg, staff: staffSvg, hammer2: hammer2Svg,
+  dagger: daggerSvg, shield: shieldSvg, raygun: raygunSvg, slingshot: slingshotSvg,
+  nunchaku: nunchakuSvg, hookshot: hookshotSvg,
 };
 
 /** Sound effect to play when clicking with this cursor. */
@@ -492,4 +625,15 @@ export const CURSOR_SOUND: Record<CursorKind, string | null> = {
   bomb:        "bomb",
   fishingRod:  "splash",
   boomerang:   "whoosh",
+  // New batch 3
+  trident:     "splash",
+  scythe:      "swordSlash",
+  staff:       "magic",
+  hammer2:     "hammer",
+  dagger:      "katana",
+  shield:      "click",
+  raygun:      "bfg",
+  slingshot:   "bow",
+  nunchaku:    "claws",
+  hookshot:    "crossbow",
 };

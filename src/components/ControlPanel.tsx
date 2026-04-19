@@ -16,7 +16,7 @@ interface Props {
   onAddPet: (k: PetKind) => void;
   onClearPets: () => void;
   gameState?: GameState;
-  onStartGame?: (game: "catch" | "memory") => void;
+  onStartGame?: (game: "catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge") => void;
   onAchievementUnlock?: (name: string, icon: string) => void;
   onPomodoroWorkEnd?: () => void;
   onPomodoroBreakEnd?: () => void;
@@ -79,26 +79,39 @@ export function ControlPanel({
         {gameState && (
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[8px] font-display text-muted-foreground">AMBIENT</span>
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               {([
-                { id: "rain", icon: "🌧️" },
-                { id: "lofi", icon: "🎵" },
-                { id: "nature", icon: "🌿" },
-                { id: "silent", icon: "🔇" },
-              ] as const).map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => gameState.setAmbientSound(s.id)}
-                  className={`px-1.5 py-1 rounded text-sm transition-all ${
-                    gameState.ambientSound === s.id
-                      ? "bg-primary/20 border border-primary/40"
-                      : "hover:bg-secondary/40"
-                  }`}
-                  title={s.id}
-                >
-                  {s.icon}
-                </button>
-              ))}
+                { id: "rain", icon: "🌧️", free: true },
+                { id: "lofi", icon: "🎵", free: true },
+                { id: "nature", icon: "🌿", free: false },
+                { id: "cafe", icon: "☕", free: false },
+                { id: "storm", icon: "⛈️", free: false },
+                { id: "space", icon: "🚀", free: false },
+                { id: "fireplace", icon: "🔥", free: false },
+                { id: "ocean", icon: "🌊", free: false },
+                { id: "city", icon: "🌃", free: false },
+                { id: "silent", icon: "🔇", free: true },
+              ] as const).map((s) => {
+                const isDemo = typeof window !== "undefined" && !(window as unknown as { pixelpets?: unknown }).pixelpets;
+                const locked = isDemo && !s.free;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => !locked && gameState.setAmbientSound(s.id)}
+                    disabled={locked}
+                    className={`px-1.5 py-1 rounded text-sm transition-all ${
+                      locked
+                        ? "opacity-40 grayscale cursor-not-allowed"
+                        : gameState.ambientSound === s.id
+                          ? "bg-primary/20 border border-primary/40"
+                          : "hover:bg-secondary/40"
+                    }`}
+                    title={locked ? "Desktop app only" : s.id}
+                  >
+                    {s.icon}{locked && "🔒"}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -192,12 +205,27 @@ export function ControlPanel({
       {gameState && onStartGame && (
         <section className="mb-4">
           <h2 className="font-display text-[10px] text-neon-pink mb-2">{t("control.minigames")}</h2>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button onClick={() => onStartGame("catch")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
               <span className="text-lg">🎯</span><span>CATCH</span>
             </button>
             <button onClick={() => onStartGame("memory")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
               <span className="text-lg">🧠</span><span>MEMORY</span>
+            </button>
+            <button onClick={() => onStartGame("simon")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
+              <span className="text-lg">🎵</span><span>SIMON</span>
+            </button>
+            <button onClick={() => onStartGame("typing")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
+              <span className="text-lg">⌨️</span><span>TYPING</span>
+            </button>
+            <button onClick={() => onStartGame("reaction")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
+              <span className="text-lg">⚡</span><span>REACT</span>
+            </button>
+            <button onClick={() => onStartGame("quiz")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
+              <span className="text-lg">❓</span><span>QUIZ</span>
+            </button>
+            <button onClick={() => onStartGame("dodge")} className="px-2 py-3 rounded-md border border-border bg-secondary/40 hover:bg-accent/20 hover:border-accent transition-all font-display text-[9px] flex flex-col items-center gap-1">
+              <span className="text-lg">🏃</span><span>DODGE</span>
             </button>
           </div>
         </section>

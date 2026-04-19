@@ -85,6 +85,17 @@ const THOUGHTS: Partial<Record<PetKind, string[]>> = {
   bear: ["grrrr suave", "miel miel 🍯", "abrazo de oso", "soy peludo", "hibernar..."],
   turtle: ["slow and steady 🐢", "mi casa va conmigo", "no hay prisa", "shell power", "lechuga pls"],
   owl: ["hoo hoo 🦉", "soy sabio", "veo todo de noche", "giro la cabeza 270°", "ratón detectado"],
+  // New batch 3
+  hamster: ["rueda rueda rueda 🐹", "mis cachetes están llenos", "semillitas pls", "soy una bolita", "energía infinita"],
+  parrot: ["¡hola! ¡hola! 🦜", "repito todo", "quiero una galleta", "plumas bonitas", "puedo hablar"],
+  jellyfish: ["blub blub 💜", "soy transparente", "no me toques", "floto sin esfuerzo", "brillo en la oscuridad"],
+  bat: ["squeak squeak 🦇", "veo con sonido", "cabeza abajo es cómodo", "soy nocturno", "no soy vampiro"],
+  crab: ["click clack 🦀", "camino de lado", "mis pinzas son fuertes", "playa life", "no me pises"],
+  frog: ["ribbit ribbit 🐸", "salto alto", "lengua rápida", "me gusta la lluvia", "soy verde y orgulloso"],
+  snail: ["despacio... 🐌", "mi casa va conmigo", "dejo brillo", "no hay prisa", "lechuga mojada pls"],
+  firefly: ["✨ brillo brillo", "soy luz en la noche", "parpadeo bonito", "catch me if you can", "luciérnaga power"],
+  octopus: ["8 brazos = 8 abrazos 🐙", "tinta tinta", "soy flexible", "cambio de color", "deep sea vibes"],
+  phoenix: ["🔥 renazco siempre", "cenizas a gloria", "fuego eterno", "soy inmortal", "alas de fuego"],
 };
 
 /** Pick a random idle thought for a pet kind. */
