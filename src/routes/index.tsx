@@ -22,6 +22,7 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { Onboarding, useOnboarding } from "@/components/Onboarding";
 import { applyTheme, type ThemeId } from "@/lib/themes";
 import { AmbientSound } from "@/components/AmbientSound";
+import { Leaderboard } from "@/components/Leaderboard";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -75,6 +76,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const handleCatchComplete = (score: number) => {
     const xp = Math.min(50, Math.max(10, score * 3));
     gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
     gameState.incrementGamesPlayed("catch");
     setActiveGame(null);
   };
@@ -82,6 +84,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const handleMemoryComplete = (attempts: number) => {
     const xp = attempts < 10 ? 50 : attempts <= 15 ? 30 : 15;
     gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
     gameState.incrementGamesPlayed("memory");
     setActiveGame(null);
   };
@@ -89,6 +92,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const handleSimonComplete = (rounds: number) => {
     const xp = Math.min(50, rounds * 5);
     gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
     gameState.incrementGamesPlayed("simon");
     setActiveGame(null);
   };
@@ -96,6 +100,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const handleTypingComplete = (score: number) => {
     const xp = Math.min(50, score * 8);
     gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
     gameState.incrementGamesPlayed("typing");
     setActiveGame(null);
   };
@@ -103,6 +108,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const handleReactionComplete = (avgMs: number) => {
     const xp = avgMs < 300 ? 50 : avgMs < 500 ? 30 : 15;
     gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
     gameState.incrementGamesPlayed("reaction");
     setActiveGame(null);
   };
@@ -110,6 +116,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const handleQuizComplete = (correct: number) => {
     const xp = Math.min(50, correct * 5);
     gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
     gameState.incrementGamesPlayed("quiz");
     setActiveGame(null);
   };
@@ -117,6 +124,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const handleDodgeComplete = (score: number) => {
     const xp = Math.min(50, score * 2);
     gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
     gameState.incrementGamesPlayed("dodge");
     setActiveGame(null);
   };
@@ -363,7 +371,11 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
               onPlay={() => actionRef.current?.play()}
               onSleep={() => actionRef.current?.sleep()}
               gameState={gameState}
+              activePetKind={activePetKind}
             />
+          )}
+          {gameState && Object.keys(gameState.petXpHistory).length > 0 && (
+            <Leaderboard gameState={gameState} />
           )}
           <WidgetPanel />
           <VolumeControl />

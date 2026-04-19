@@ -55,6 +55,35 @@ export const ACCESSORY_LIST: AccessoryDef[] = [
     unlockLevel: 0,
     render: (_facing) => null,
   },
+  // Seasonal accessories
+  {
+    id: "witch-hat",
+    name: { en: "Witch Hat", pt: "Chapéu de Bruxa" },
+    slot: "head",
+    unlockLevel: 0,
+    render: (_facing) => null,
+  },
+  {
+    id: "santa-hat",
+    name: { en: "Santa Hat", pt: "Gorro de Natal" },
+    slot: "head",
+    unlockLevel: 0,
+    render: (_facing) => null,
+  },
+  {
+    id: "heart-crown",
+    name: { en: "Heart Crown", pt: "Coroa de Corações" },
+    slot: "head",
+    unlockLevel: 0,
+    render: (_facing) => null,
+  },
+  {
+    id: "sunglasses",
+    name: { en: "Sunglasses", pt: "Óculos de Sol" },
+    slot: "eyes",
+    unlockLevel: 0,
+    render: (_facing) => null,
+  },
 ];
 
 export const ACCESSORIES: Record<AccessoryId, AccessoryDef> = Object.fromEntries(

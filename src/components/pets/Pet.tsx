@@ -7,6 +7,8 @@ import type { GameState } from "@/hooks/useGameState";
 import { AccessoryRenderer } from "./AccessoryRenderer";
 import { ParticleSystem, type ParticleConfig } from "./ParticleSystem";
 import { getPersonality, getChaosMultipliers } from "./petPersonality";
+import { getCurrentSeason } from "@/lib/seasons";
+import { getEvolution } from "./petEvolution";
 
 export type PetStats = {
   hunger: number;    // 0 (hambriento) → 100 (lleno)
@@ -92,6 +94,11 @@ export function Pet({
             ? Math.min(100, s.energy + 6 * p.sleepRecovery)
             : Math.max(0, s.energy - 1 * p.energyDecay),
         };
+        // Seasonal bonus: +2 to the bonus stat during active event
+        const season = getCurrentSeason();
+        if (season) {
+          next[season.petBonus] = Math.min(100, next[season.petBonus] + 2);
+        }
         return next;
       });
     }, 6000);
@@ -225,6 +232,25 @@ export function Pet({
     setStats((s) => ({ ...s, xp: gameState.xp, level: gameState.level }));
   }, [gameState?.xp, gameState?.level, emitParticles]);
 
+  // Evolution detection
+  const evolvedRef = useRef(false);
+  useEffect(() => {
+    if (!gameState) return;
+    const evo = getEvolution(kind, gameState.level);
+    if (evo && !gameState.evolvedPets.includes(kind) && !evolvedRef.current) {
+      evolvedRef.current = true;
+      // First-time evolution animation
+      setTimeout(() => {
+        playSound("happy");
+        speak("I evolved! ✨", 3000);
+        emitParticles("confetti");
+        setState("jump");
+        setTimeout(() => setState("walk"), 500);
+        gameState.markEvolved(kind);
+      }, 1500);
+    }
+  }, [gameState?.level, gameState?.evolvedPets, kind, emitParticles]);
+
   // Idle thoughts: every ~14-26s pick a random thought (themed or mood-based).
   // Skipped while sleeping/fainted/dragging to not be annoying.
   const statsRef = useRef(stats);
@@ -263,6 +289,7 @@ export function Pet({
         emitParticles("food");
         if (gameState) {
           gameState.addXp(5);
+          gameState.addPetXp(kind, 5);
           gameState.incrementFeedCount();
         }
       },
@@ -275,6 +302,7 @@ export function Pet({
         setTimeout(() => setState("walk"), 500);
         if (gameState) {
           gameState.addXp(8);
+          gameState.addPetXp(kind, 8);
           gameState.incrementPlayCount();
         }
       },
@@ -448,6 +476,7 @@ export function Pet({
     playSound(personality.clickSound as Parameters<typeof playSound>[0]);
     if (gameState) {
       gameState.addXp(2);
+      gameState.addPetXp(kind, 2);
       gameState.incrementClickCount();
     }
   };
@@ -538,6 +567,7 @@ export function Pet({
       playSound(personality.clickSound as Parameters<typeof playSound>[0]);
       if (gameState) {
         gameState.addXp(2);
+        gameState.addPetXp(kind, 2);
         gameState.incrementClickCount();
       }
     }
@@ -594,6 +624,7 @@ export function Pet({
   if (awareness?.musicDetected) needIcons.push({ icon: "🎵", label: "música" });
 
   const isFainted = state === "faint";
+  const evolution = gameState ? getEvolution(kind, gameState.level) : null;
 
   return (
     <div
@@ -650,9 +681,11 @@ export function Pet({
         </div>
       )}
       <div className={
+        `${evolution ? "pet-evolved " : ""}${
         awareness?.musicDetected && state !== "sleep" && state !== "faint"
           ? "animate-bounce w-full h-full"
           : state === "idle" || state === "sleep" ? "animate-bob w-full h-full" : "w-full h-full"
+        }`
       }>
         {def.render(facing, step)}
       </div>

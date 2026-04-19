@@ -22,6 +22,8 @@ export interface PersistedGameState {
   streakDays: number;     // consecutive days active
   theme: string;          // ThemeId
   ambientSound: string;   // "rain" | "lofi" | "nature" | "silent"
+  evolvedPets: string[];  // pet kinds that have been evolved (animation shown once)
+  petXpHistory: Record<string, number>; // petKind → total XP earned
 }
 
 export interface GameActions {
@@ -39,6 +41,8 @@ export interface GameActions {
   getPetName: (kind: string) => string;
   setTheme: (theme: string) => void;
   setAmbientSound: (sound: string) => void;
+  markEvolved: (kind: string) => void;
+  addPetXp: (kind: string, amount: number) => void;
 }
 
 export type GameState = PersistedGameState & GameActions & {
@@ -88,6 +92,8 @@ const DEFAULT_STATE: PersistedGameState = {
   streakDays: 0,
   theme: "cyberpunk",
   ambientSound: "silent",
+  evolvedPets: [],
+  petXpHistory: {},
 };
 
 export function calculateLevel(xp: number): number {
@@ -215,6 +221,18 @@ export function useGameState(): GameState {
     persist({ ...prev, ambientSound: sound });
   }, [persist]);
 
+  const markEvolved = useCallback((kind: string) => {
+    const prev = stateRef.current;
+    if (prev.evolvedPets.includes(kind)) return;
+    persist({ ...prev, evolvedPets: [...prev.evolvedPets, kind] });
+  }, [persist]);
+
+  const addPetXp = useCallback((kind: string, amount: number) => {
+    const prev = stateRef.current;
+    const current = prev.petXpHistory[kind] ?? 0;
+    persist({ ...prev, petXpHistory: { ...prev.petXpHistory, [kind]: current + amount } });
+  }, [persist]);
+
   // Achievement checking — runs on every persist
   const achievementCallbackRef = useRef<((name: string, icon: string) => void) | null>(null);
 
@@ -256,6 +274,8 @@ export function useGameState(): GameState {
     getPetName,
     setTheme,
     setAmbientSound,
+    markEvolved,
+    addPetXp,
     achievementCallbackRef,
   };
 }

@@ -3,6 +3,9 @@ import type { SystemAwareness } from "@/hooks/useSystemAwareness";
 import type { GameState } from "@/hooks/useGameState";
 import { useI18n } from "@/lib/i18n";
 import { ShareButton } from "./ShareButton";
+import { getEvolution } from "./pets/petEvolution";
+import { WallpaperGenerator } from "./WallpaperGenerator";
+import type { PetKind } from "./pets/petSprites";
 
 interface Props {
   stats: PetStats | null;
@@ -12,6 +15,7 @@ interface Props {
   onPlay: () => void;
   onSleep: () => void;
   gameState?: GameState;
+  activePetKind?: string;
 }
 
 function Bar({ label, value, color }: { label: string; value: number; color: string }) {
@@ -35,10 +39,11 @@ function Bar({ label, value, color }: { label: string; value: number; color: str
   );
 }
 
-export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep, gameState }: Props) {
+export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep, gameState, activePetKind }: Props) {
   if (!stats) return null;
   const { t } = useI18n();
   const battPct = awareness?.batteryLevel != null ? Math.round(awareness.batteryLevel * 100) : null;
+  const evolution = activePetKind && gameState ? getEvolution(activePetKind as any, gameState.level) : null;
 
   const TOD_LABEL: Record<string, { icon: string; text: string }> = {
     morning: { icon: "🌅", text: t("stats.morning") },
@@ -62,7 +67,10 @@ export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep,
   return (
     <section className="glass rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-display text-[10px] text-neon-pink">{petName.toUpperCase()} · {t("stats.title")}</h2>
+        <h2 className="font-display text-[10px] text-neon-pink">
+          {petName.toUpperCase()} · {t("stats.title")}
+          {evolution && <span className="ml-2 text-[8px] text-neon animate-pulse-glow inline-block">✨ EVOLVED</span>}
+        </h2>
         <ShareButton petName={petName} stats={stats} gameState={gameState} />
       </div>
       <div className="space-y-3 mb-4">
@@ -171,6 +179,11 @@ export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep,
           <span>{t("stats.sleep")}</span>
         </button>
       </div>
+
+      {/* Wallpaper Generator */}
+      {gameState && activePetKind && (
+        <WallpaperGenerator gameState={gameState} activePetKind={activePetKind as PetKind} petName={petName} />
+      )}
     </section>
   );
 }

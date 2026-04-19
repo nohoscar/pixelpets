@@ -4,7 +4,7 @@
 //   2) Pet overlay: transparent, frameless, click-through, always-on-top
 // Tray menu: switch pets, toggle follow cursor, show/hide panel, quit.
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, screen, shell, ipcMain } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, screen, shell, ipcMain, Notification } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -331,6 +331,50 @@ app.whenReady().then(() => {
   // Check every 5 seconds
   setInterval(checkMusic, 5000);
   setTimeout(checkMusic, 5000);
+
+  // --- Notification Reminders ---
+  let lastInteractionTime = Date.now();
+  const NOTIFICATION_MESSAGES = [
+    "Your pet misses you! 🐾",
+    "Time to feed your pet! 🍖",
+    "Your pet wants to play! 🎾",
+  ];
+  let notificationIndex = 0;
+
+  // Track interactions from panel
+  ipcMain.on("user-interaction", () => {
+    lastInteractionTime = Date.now();
+  });
+
+  // Also reset on any IPC activity
+  const originalOn = ipcMain.on.bind(ipcMain);
+  ["set-pet", "set-follow", "pet-action"].forEach((channel) => {
+    ipcMain.on(channel + "-activity", () => { lastInteractionTime = Date.now(); });
+  });
+
+  // Check every 30 minutes for idle notification
+  setInterval(() => {
+    const idleMinutes = (Date.now() - lastInteractionTime) / 60000;
+    if (idleMinutes > 20 && Notification.isSupported()) {
+      const msg = NOTIFICATION_MESSAGES[notificationIndex % NOTIFICATION_MESSAGES.length];
+      notificationIndex++;
+      const notification = new Notification({
+        title: "PixelPets 🐾",
+        body: msg,
+        silent: false,
+      });
+      notification.on("click", () => {
+        if (panelWindow) {
+          panelWindow.show();
+          panelWindow.focus();
+        } else {
+          createPanelWindow();
+        }
+        lastInteractionTime = Date.now();
+      });
+      notification.show();
+    }
+  }, 30 * 60 * 1000); // 30 minutes
 });
 
 // Keep app alive on macOS even if all windows close.

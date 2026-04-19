@@ -80,6 +80,12 @@
 }
 .animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
 
+@keyframes pet-sparkle {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6)); }
+  50% { filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.9)) drop-shadow(0 0 20px rgba(255, 215, 0, 0.4)); }
+}
+.pet-evolved { animation: pet-sparkle 2s ease-in-out infinite; }
+
 @keyframes particle-fly {
   0% { transform: translate(0, 0); opacity: 1; }
   100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }

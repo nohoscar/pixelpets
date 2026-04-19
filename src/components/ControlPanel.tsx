@@ -6,6 +6,7 @@ import { ACHIEVEMENTS } from "@/hooks/useGameState";
 import { PomodoroTimer } from "./PomodoroTimer";
 import { useI18n } from "@/lib/i18n";
 import { THEMES, applyTheme, type ThemeId } from "@/lib/themes";
+import { getCurrentSeason } from "@/lib/seasons";
 
 // Web demo limitations
 const isWebDemo = typeof window !== "undefined" && !(window as any).pixelpets;
@@ -42,9 +43,16 @@ export function ControlPanel({
   const unlocked = getUnlockedAccessories(level);
   const locked = getLockedAccessories(level);
   const { t, locale, setLocale } = useI18n();
+  const currentSeason = getCurrentSeason();
 
   return (
     <aside className="glass rounded-xl p-5 w-full max-w-sm pointer-events-auto max-h-[80vh] overflow-y-auto md:max-h-[90vh]">
+      {/* Seasonal Banner */}
+      {currentSeason && (
+        <div className="mb-3 px-3 py-2 rounded-lg border border-primary/40 bg-primary/10 text-center font-display text-[10px] text-neon animate-pulse-glow">
+          {currentSeason.icon} {currentSeason.name} {currentSeason.icon}
+        </div>
+      )}
       {/* Header */}
       <header className="mb-5">
         <div className="flex items-center justify-between">
