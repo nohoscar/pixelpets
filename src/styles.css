@@ -98,6 +98,35 @@
   100% { opacity: 0; transform: translate(-50%, -10px); }
 }
 
+/* Seasonal background animations */
+@keyframes snowfall {
+  0% { transform: translateY(-5vh) translateX(0); opacity: 0.8; }
+  50% { transform: translateY(50vh) translateX(15px); opacity: 1; }
+  100% { transform: translateY(105vh) translateX(-10px); opacity: 0; }
+}
+@keyframes float-hearts {
+  0% { transform: translateY(-5vh) scale(0.8); opacity: 0; }
+  10% { opacity: 0.8; }
+  50% { transform: translateY(50vh) translateX(20px) scale(1); opacity: 0.7; }
+  100% { transform: translateY(105vh) translateX(-15px) scale(0.6); opacity: 0; }
+}
+@keyframes float-ghosts {
+  0% { transform: translateY(-5vh) translateX(0); opacity: 0; }
+  10% { opacity: 0.7; }
+  50% { transform: translateY(50vh) translateX(-20px); opacity: 0.6; }
+  100% { transform: translateY(105vh) translateX(10px); opacity: 0; }
+}
+@keyframes sun-rays {
+  0% { transform: translateY(0) scale(1); opacity: 0.3; }
+  50% { transform: translateY(10px) scale(1.2); opacity: 0.6; }
+  100% { transform: translateY(0) scale(1); opacity: 0.3; }
+}
+
+.seasonal-particle--snowfall { animation: snowfall 6s linear infinite; }
+.seasonal-particle--float-hearts { animation: float-hearts 7s ease-in-out infinite; }
+.seasonal-particle--float-ghosts { animation: float-ghosts 8s ease-in-out infinite; }
+.seasonal-particle--sun-rays { animation: sun-rays 4s ease-in-out infinite; }
+
 :root {
   --radius: 0.5rem;
 

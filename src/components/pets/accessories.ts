@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { AccessorySlot, AccessoryId } from "@/hooks/useGameState";
+import { getCurrentSeason } from "@/lib/seasons";
 
 export interface AccessoryDef {
   id: AccessoryId;
@@ -7,6 +8,15 @@ export interface AccessoryDef {
   slot: AccessorySlot;
   unlockLevel: number;
   render: (facing: "left" | "right") => ReactNode;
+}
+
+const SEASONAL_IDS = ["witch-hat", "santa-hat", "heart-crown", "sunglasses"] as const;
+
+/** Returns true if the accessory is seasonal and its event is NOT currently active */
+function isHiddenSeasonal(id: string): boolean {
+  if (!(SEASONAL_IDS as readonly string[]).includes(id)) return false;
+  const season = getCurrentSeason();
+  return season?.specialAccessory !== id;
 }
 
 // SVG elements positioned relative to 32×32 viewBox
@@ -91,9 +101,20 @@ export const ACCESSORIES: Record<AccessoryId, AccessoryDef> = Object.fromEntries
 );
 
 export function getUnlockedAccessories(level: number): AccessoryDef[] {
-  return ACCESSORY_LIST.filter((a) => a.unlockLevel <= level);
+  const season = getCurrentSeason();
+  return ACCESSORY_LIST.filter((a) => {
+    if (a.unlockLevel > level) return false;
+    if ((SEASONAL_IDS as readonly string[]).includes(a.id)) {
+      return season?.specialAccessory === a.id;
+    }
+    return true;
+  });
 }
 
 export function getLockedAccessories(level: number): AccessoryDef[] {
-  return ACCESSORY_LIST.filter((a) => a.unlockLevel > level);
+  return ACCESSORY_LIST.filter((a) => {
+    if (a.unlockLevel <= level) return false;
+    if (isHiddenSeasonal(a.id)) return false;
+    return true;
+  });
 }

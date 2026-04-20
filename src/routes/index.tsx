@@ -23,6 +23,7 @@ import { Onboarding, useOnboarding } from "@/components/Onboarding";
 import { applyTheme, type ThemeId } from "@/lib/themes";
 import { AmbientSound } from "@/components/AmbientSound";
 import { Leaderboard } from "@/components/Leaderboard";
+import { SeasonalBackground } from "@/components/SeasonalBackground";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -269,6 +270,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden">
+      <SeasonalBackground />
       {/* Mobile compact header */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 glass border-b border-border/60">
         <span className="font-display text-[10px] text-neon">{t("mobile.header")}</span>
