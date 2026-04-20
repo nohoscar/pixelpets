@@ -22,6 +22,7 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { Onboarding, useOnboarding } from "@/components/Onboarding";
 import { applyTheme, type ThemeId } from "@/lib/themes";
 import { AmbientSound } from "@/components/AmbientSound";
+import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { Leaderboard } from "@/components/Leaderboard";
 import { SeasonalBackground } from "@/components/SeasonalBackground";
 
@@ -430,6 +431,11 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
           <p className="text-[10px] font-display text-muted-foreground mt-8">
             {t("hero.footer")}
           </p>
+
+          {/* Animated stats counter */}
+          <div className="mt-8 pointer-events-auto">
+            <AnimatedCounter />
+          </div>
         </section>
       </div>
     </main>

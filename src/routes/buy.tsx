@@ -6,6 +6,7 @@ import { PetGallery } from "@/components/PetGallery";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { useGameState } from "@/hooks/useGameState";
 import { applyTheme, type ThemeId } from "@/lib/themes";
+import { AnimatedCounter } from "@/components/AnimatedCounter";
 
 export const Route = createFileRoute("/buy")({
   component: BuyPage,
@@ -216,6 +217,11 @@ function BuyPageContent() {
             </p>
           </div>
         </div>
+      </section>
+
+      {/* ANIMATED STATS */}
+      <section className="max-w-4xl mx-auto px-4 md:px-6 py-8">
+        <AnimatedCounter />
       </section>
 
       {/* FEATURES */}
