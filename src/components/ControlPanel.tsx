@@ -23,7 +23,7 @@ interface Props {
   onAddPet: (k: PetKind) => void;
   onClearPets: () => void;
   gameState?: GameState;
-  onStartGame?: (game: "catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge") => void;
+  onStartGame?: (game: "catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | "whack" | "snake" | "flappy" | "puzzle" | "colorMatch" | "rhythm") => void;
   onAchievementUnlock?: (name: string, icon: string) => void;
   onPomodoroWorkEnd?: () => void;
   onPomodoroBreakEnd?: () => void;
@@ -104,6 +104,10 @@ export function ControlPanel({
                 { id: "fireplace", icon: "🔥", free: false },
                 { id: "ocean", icon: "🌊", free: false },
                 { id: "city", icon: "🌃", free: false },
+                { id: "whispers", icon: "👁️", free: false },
+                { id: "heartbeat", icon: "💀", free: false },
+                { id: "dungeon", icon: "⛓️", free: false },
+                { id: "void", icon: "🕳️", free: false },
                 { id: "silent", icon: "🔇", free: true },
               ] as const).map((s) => {
                 const isDemo = typeof window !== "undefined" && !(window as unknown as { pixelpets?: unknown }).pixelpets;
@@ -235,6 +239,12 @@ export function ControlPanel({
               { id: "reaction", icon: "⚡", label: "REACT" },
               { id: "quiz", icon: "❓", label: "QUIZ" },
               { id: "dodge", icon: "🏃", label: "DODGE" },
+              { id: "whack", icon: "🔨", label: "WHACK" },
+              { id: "snake", icon: "🐍", label: "SNAKE" },
+              { id: "flappy", icon: "🐦", label: "FLAPPY" },
+              { id: "puzzle", icon: "🧩", label: "PUZZLE" },
+              { id: "colorMatch", icon: "🎨", label: "COLOR" },
+              { id: "rhythm", icon: "🎶", label: "RHYTHM" },
             ] as const).map((game) => {
               const isLocked = isWebDemo && !FREE_GAMES.includes(game.id);
               return (

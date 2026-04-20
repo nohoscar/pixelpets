@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { getAudioState } from "@/lib/audio";
 
-export type AmbientId = "rain" | "lofi" | "nature" | "cafe" | "storm" | "space" | "fireplace" | "ocean" | "city" | "silent";
+export type AmbientId = "rain" | "lofi" | "nature" | "cafe" | "storm" | "space" | "fireplace" | "ocean" | "city" | "whispers" | "heartbeat" | "dungeon" | "void" | "silent";
 
 interface Props {
   soundId: string;
@@ -56,6 +56,10 @@ export function AmbientSound({ soundId }: Props) {
     else if (id === "fireplace") createFireplace(ctx, masterGain);
     else if (id === "ocean") createOcean(ctx, masterGain);
     else if (id === "city") createCity(ctx, masterGain);
+    else if (id === "whispers") createWhispers(ctx, masterGain);
+    else if (id === "heartbeat") createHeartbeat(ctx, masterGain);
+    else if (id === "dungeon") createDungeon(ctx, masterGain);
+    else if (id === "void") createVoid(ctx, masterGain);
 
     return () => cleanup();
   }, [soundId]);
@@ -431,6 +435,235 @@ export function AmbientSound({ soundId }: Props) {
       nodesRef.current.push({ stop: () => clearTimeout(timeout) } as unknown as AudioNode);
     };
     scheduleSiren();
+  }
+
+  function createWhispers(ctx: AudioContext, dest: AudioNode) {
+    // Filtered noise with random volume spikes
+    const bufferSize = ctx.sampleRate * 4;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 3000;
+    filter.Q.value = 2;
+
+    const volGain = ctx.createGain();
+    volGain.gain.value = 0.02;
+
+    src.connect(filter).connect(volGain).connect(dest);
+    src.start();
+    nodesRef.current.push(src);
+
+    // Random volume spikes
+    const scheduleSpike = () => {
+      const delay = (1 + Math.random() * 3) * 1000;
+      const timeout = setTimeout(() => {
+        if (!ctxRef.current) return;
+        const t = ctx.currentTime;
+        const spikeGain = 0.02 + Math.random() * 0.06;
+        volGain.gain.setValueAtTime(volGain.gain.value, t);
+        volGain.gain.linearRampToValueAtTime(spikeGain, t + 0.1);
+        volGain.gain.linearRampToValueAtTime(0.02, t + 0.5);
+        scheduleSpike();
+      }, delay);
+      nodesRef.current.push({ stop: () => clearTimeout(timeout) } as unknown as AudioNode);
+    };
+    scheduleSpike();
+
+    // Occasional breathy sine sweeps
+    const scheduleSweep = () => {
+      const delay = (5 + Math.random() * 7) * 1000;
+      const timeout = setTimeout(() => {
+        if (!ctxRef.current) return;
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        const t = ctx.currentTime;
+        osc.frequency.setValueAtTime(300, t);
+        osc.frequency.linearRampToValueAtTime(600, t + 2);
+        const sweepGain = ctx.createGain();
+        sweepGain.gain.setValueAtTime(0, t);
+        sweepGain.gain.linearRampToValueAtTime(0.04, t + 0.5);
+        sweepGain.gain.linearRampToValueAtTime(0, t + 2);
+        osc.connect(sweepGain).connect(dest);
+        osc.start(t);
+        osc.stop(t + 2.1);
+        scheduleSweep();
+      }, delay);
+      nodesRef.current.push({ stop: () => clearTimeout(timeout) } as unknown as AudioNode);
+    };
+    scheduleSweep();
+  }
+
+  function createHeartbeat(ctx: AudioContext, dest: AudioNode) {
+    // Rhythmic low sine pulse at 40Hz
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = 40;
+    const beatGain = ctx.createGain();
+    beatGain.gain.value = 0;
+    osc.connect(beatGain).connect(dest);
+    osc.start();
+    nodesRef.current.push(osc);
+
+    // Beat pattern: 0.8s on / 0.4s off
+    const scheduleBeat = () => {
+      const interval = setInterval(() => {
+        if (!ctxRef.current) return;
+        const t = ctx.currentTime;
+        // First beat
+        beatGain.gain.setValueAtTime(0, t);
+        beatGain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+        beatGain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+        // Second beat (double-beat like real heartbeat)
+        beatGain.gain.setValueAtTime(0, t + 0.4);
+        beatGain.gain.linearRampToValueAtTime(0.2, t + 0.42);
+        beatGain.gain.exponentialRampToValueAtTime(0.001, t + 0.72);
+      }, 1200);
+      nodesRef.current.push({ stop: () => clearInterval(interval) } as unknown as AudioNode);
+    };
+    scheduleBeat();
+
+    // Very quiet high-pass filtered noise for tension
+    const bufferSize = ctx.sampleRate * 4;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const ndata = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) ndata[i] = Math.random() * 2 - 1;
+
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = buffer;
+    noiseSrc.loop = true;
+
+    const hpFilter = ctx.createBiquadFilter();
+    hpFilter.type = "highpass";
+    hpFilter.frequency.value = 6000;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0.02;
+
+    noiseSrc.connect(hpFilter).connect(noiseGain).connect(dest);
+    noiseSrc.start();
+    nodesRef.current.push(noiseSrc);
+  }
+
+  function createDungeon(ctx: AudioContext, dest: AudioNode) {
+    // Low reverb-like drone
+    const drone = ctx.createOscillator();
+    drone.type = "sine";
+    drone.frequency.value = 60;
+    const droneGain = ctx.createGain();
+    droneGain.gain.value = 0.1;
+    drone.connect(droneGain).connect(dest);
+    drone.start();
+    nodesRef.current.push(drone);
+
+    // Water drip sounds
+    const scheduleDrip = () => {
+      const delay = (2 + Math.random() * 4) * 1000;
+      const timeout = setTimeout(() => {
+        if (!ctxRef.current) return;
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        const freq = 1500 + Math.random() * 1500;
+        const t = ctx.currentTime;
+        osc.frequency.setValueAtTime(freq, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.5, t + 0.08);
+        const dripGain = ctx.createGain();
+        dripGain.gain.setValueAtTime(0.12, t);
+        dripGain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        osc.connect(dripGain).connect(dest);
+        osc.start(t);
+        osc.stop(t + 0.12);
+        scheduleDrip();
+      }, delay);
+      nodesRef.current.push({ stop: () => clearTimeout(timeout) } as unknown as AudioNode);
+    };
+    scheduleDrip();
+
+    // Occasional metallic creak
+    const scheduleCreak = () => {
+      const delay = (8 + Math.random() * 7) * 1000;
+      const timeout = setTimeout(() => {
+        if (!ctxRef.current) return;
+        const osc = ctx.createOscillator();
+        osc.type = "sawtooth";
+        const t = ctx.currentTime;
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.linearRampToValueAtTime(400, t + 0.5);
+        const creakGain = ctx.createGain();
+        creakGain.gain.setValueAtTime(0, t);
+        creakGain.gain.linearRampToValueAtTime(0.06, t + 0.1);
+        creakGain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        osc.connect(creakGain).connect(dest);
+        osc.start(t);
+        osc.stop(t + 0.55);
+        scheduleCreak();
+      }, delay);
+      nodesRef.current.push({ stop: () => clearTimeout(timeout) } as unknown as AudioNode);
+    };
+    scheduleCreak();
+  }
+
+  function createVoid(ctx: AudioContext, dest: AudioNode) {
+    // Ultra-low drone: sine at 30Hz + 31Hz for beating effect
+    const drone1 = ctx.createOscillator();
+    drone1.type = "sine";
+    drone1.frequency.value = 30;
+    const drone2 = ctx.createOscillator();
+    drone2.type = "sine";
+    drone2.frequency.value = 31;
+
+    const droneGain = ctx.createGain();
+    droneGain.gain.value = 0.15;
+
+    drone1.connect(droneGain);
+    drone2.connect(droneGain);
+    droneGain.connect(dest);
+    drone1.start();
+    drone2.start();
+    nodesRef.current.push(drone1, drone2);
+
+    // Very slow filtered noise sweep (bandpass 100→2000→100Hz over 20s)
+    const bufferSize = ctx.sampleRate * 4;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const ndata = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) ndata[i] = Math.random() * 2 - 1;
+
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = buffer;
+    noiseSrc.loop = true;
+
+    const sweepFilter = ctx.createBiquadFilter();
+    sweepFilter.type = "bandpass";
+    sweepFilter.frequency.value = 100;
+    sweepFilter.Q.value = 5;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0.08;
+
+    noiseSrc.connect(sweepFilter).connect(noiseGain).connect(dest);
+    noiseSrc.start();
+    nodesRef.current.push(noiseSrc);
+
+    // Sweep the filter frequency
+    const scheduleSweep = () => {
+      if (!ctxRef.current) return;
+      const t = ctx.currentTime;
+      sweepFilter.frequency.setValueAtTime(100, t);
+      sweepFilter.frequency.linearRampToValueAtTime(2000, t + 10);
+      sweepFilter.frequency.linearRampToValueAtTime(100, t + 20);
+    };
+    scheduleSweep();
+    const sweepInterval = setInterval(() => {
+      if (!ctxRef.current) return;
+      scheduleSweep();
+    }, 20000);
+    nodesRef.current.push({ stop: () => clearInterval(sweepInterval) } as unknown as AudioNode);
   }
 
   // Cleanup on unmount

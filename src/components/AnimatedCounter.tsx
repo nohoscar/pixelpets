@@ -40,8 +40,8 @@ function Counter({ value, duration = 1500 }: { value: number; duration?: number 
 const STATS: CounterItem[] = [
   { value: 62, label: "MASCOTAS", icon: "🐾" },
   { value: 40, label: "CURSORES", icon: "🎮" },
-  { value: 7, label: "JUEGOS", icon: "🕹️" },
-  { value: 10, label: "SONIDOS", icon: "🎵" },
+  { value: 13, label: "JUEGOS", icon: "🕹️" },
+  { value: 14, label: "SONIDOS", icon: "🎵" },
 ];
 
 export function AnimatedCounter() {

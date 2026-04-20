@@ -16,6 +16,12 @@ import { TypingGame } from "@/components/games/TypingGame";
 import { ReactionGame } from "@/components/games/ReactionGame";
 import { PetQuizGame } from "@/components/games/PetQuizGame";
 import { DodgeGame } from "@/components/games/DodgeGame";
+import { WhackGame } from "@/components/games/WhackGame";
+import { SnakeGame } from "@/components/games/SnakeGame";
+import { FlappyGame } from "@/components/games/FlappyGame";
+import { PuzzleGame } from "@/components/games/PuzzleGame";
+import { ColorMatchGame } from "@/components/games/ColorMatchGame";
+import { RhythmGame } from "@/components/games/RhythmGame";
 import { AchievementToast } from "@/components/AchievementToast";
 import { WidgetPanel } from "@/components/WidgetPanel";
 import { I18nProvider, useI18n } from "@/lib/i18n";
@@ -62,7 +68,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
   const [cursor, setCursor] = useState<CursorKind>("csgo");
   const [followCursor, setFollowCursor] = useState(false);
   const [stats, setStats] = useState<PetStats | null>(null);
-  const [activeGame, setActiveGame] = useState<"catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | null>(null);
+  const [activeGame, setActiveGame] = useState<"catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | "whack" | "snake" | "flappy" | "puzzle" | "colorMatch" | "rhythm" | null>(null);
   const [achievementToast, setAchievementToast] = useState<{ name: string; icon: string } | null>(null);
   const [activePetId, setActivePetId] = useState<string>("p1");
   const awareness = useSystemAwareness();
@@ -128,6 +134,54 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
     gameState.addXp(xp);
     if (activePetKind) gameState.addPetXp(activePetKind, xp);
     gameState.incrementGamesPlayed("dodge");
+    setActiveGame(null);
+  };
+
+  const handleWhackComplete = (score: number) => {
+    const xp = Math.min(50, score * 3);
+    gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
+    gameState.incrementGamesPlayed("whack");
+    setActiveGame(null);
+  };
+
+  const handleSnakeComplete = (length: number) => {
+    const xp = Math.min(50, length * 3);
+    gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
+    gameState.incrementGamesPlayed("snake");
+    setActiveGame(null);
+  };
+
+  const handleFlappyComplete = (score: number) => {
+    const xp = Math.min(50, score * 5);
+    gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
+    gameState.incrementGamesPlayed("flappy");
+    setActiveGame(null);
+  };
+
+  const handlePuzzleComplete = (moves: number) => {
+    const xp = moves < 20 ? 50 : moves < 30 ? 30 : 15;
+    gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
+    gameState.incrementGamesPlayed("puzzle");
+    setActiveGame(null);
+  };
+
+  const handleColorMatchComplete = (score: number) => {
+    const xp = Math.min(50, Math.round(score * 2.5));
+    gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
+    gameState.incrementGamesPlayed("colorMatch");
+    setActiveGame(null);
+  };
+
+  const handleRhythmComplete = (score: number) => {
+    const xp = Math.min(50, score * 2);
+    gameState.addXp(xp);
+    if (activePetKind) gameState.addPetXp(activePetKind, xp);
+    gameState.incrementGamesPlayed("rhythm");
     setActiveGame(null);
   };
 
@@ -338,6 +392,24 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
       )}
       {activeGame === "dodge" && (
         <DodgeGame onComplete={handleDodgeComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "whack" && (
+        <WhackGame onComplete={handleWhackComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "snake" && (
+        <SnakeGame onComplete={handleSnakeComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "flappy" && (
+        <FlappyGame onComplete={handleFlappyComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "puzzle" && (
+        <PuzzleGame onComplete={handlePuzzleComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "colorMatch" && (
+        <ColorMatchGame onComplete={handleColorMatchComplete} onCancel={handleGameCancel} />
+      )}
+      {activeGame === "rhythm" && (
+        <RhythmGame onComplete={handleRhythmComplete} onCancel={handleGameCancel} />
       )}
 
       {/* Achievement toast */}

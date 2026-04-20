@@ -13,7 +13,7 @@ export interface PersistedGameState {
   feedCount: number;
   playCount: number;
   clickCount: number;
-  gamesPlayed: { catch: number; memory: number; simon: number; typing: number; reaction: number; quiz: number; dodge: number };
+  gamesPlayed: { catch: number; memory: number; simon: number; typing: number; reaction: number; quiz: number; dodge: number; whack: number; snake: number; flappy: number; puzzle: number; colorMatch: number; rhythm: number };
   pomodoroConfig: { workMinutes: number; breakMinutes: number };
   locale: "en" | "pt";
   nightModeManualOverride: boolean;
@@ -33,7 +33,7 @@ export interface GameActions {
   incrementFeedCount: () => void;
   incrementPlayCount: () => void;
   incrementClickCount: () => void;
-  incrementGamesPlayed: (game: "catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge") => void;
+  incrementGamesPlayed: (game: "catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | "whack" | "snake" | "flappy" | "puzzle" | "colorMatch" | "rhythm") => void;
   setLocale: (locale: "en" | "pt") => void;
   setNightModeManualOverride: (v: boolean) => void;
   setPomodoroConfig: (config: { workMinutes: number; breakMinutes: number }) => void;
@@ -65,7 +65,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "level-5", name: { en: "Rising Star", pt: "Estrela" }, icon: "⭐", condition: (s) => s.level >= 5 },
   { id: "level-10", name: { en: "Veteran", pt: "Veterano" }, icon: "🏆", condition: (s) => s.level >= 10 },
   { id: "survived-critical", name: { en: "Survivor", pt: "Sobrevivente" }, icon: "🪫", condition: () => false }, // triggered externally
-  { id: "all-minigames", name: { en: "Gamer", pt: "Gamer" }, icon: "🎮", condition: (s) => s.gamesPlayed.catch > 0 && s.gamesPlayed.memory > 0 && s.gamesPlayed.simon > 0 && s.gamesPlayed.typing > 0 && s.gamesPlayed.reaction > 0 && s.gamesPlayed.quiz > 0 && s.gamesPlayed.dodge > 0 },
+  { id: "all-minigames", name: { en: "Gamer", pt: "Gamer" }, icon: "🎮", condition: (s) => s.gamesPlayed.catch > 0 && s.gamesPlayed.memory > 0 && s.gamesPlayed.simon > 0 && s.gamesPlayed.typing > 0 && s.gamesPlayed.reaction > 0 && s.gamesPlayed.quiz > 0 && s.gamesPlayed.dodge > 0 && s.gamesPlayed.whack > 0 && s.gamesPlayed.snake > 0 && s.gamesPlayed.flappy > 0 && s.gamesPlayed.puzzle > 0 && s.gamesPlayed.colorMatch > 0 && s.gamesPlayed.rhythm > 0 },
   { id: "first-accessory", name: { en: "Fashionista", pt: "Fashionista" }, icon: "🎩", condition: (s) => Object.values(s.accessories).some((v) => v !== null) },
   { id: "night-owl", name: { en: "Night Owl", pt: "Coruja" }, icon: "🦉", condition: () => new Date().getHours() === 3 },
   { id: "clicked-500", name: { en: "Clicker", pt: "Clicador" }, icon: "🖱️", condition: (s) => s.clickCount >= 500 },
@@ -83,7 +83,7 @@ const DEFAULT_STATE: PersistedGameState = {
   feedCount: 0,
   playCount: 0,
   clickCount: 0,
-  gamesPlayed: { catch: 0, memory: 0, simon: 0, typing: 0, reaction: 0, quiz: 0, dodge: 0 },
+  gamesPlayed: { catch: 0, memory: 0, simon: 0, typing: 0, reaction: 0, quiz: 0, dodge: 0, whack: 0, snake: 0, flappy: 0, puzzle: 0, colorMatch: 0, rhythm: 0 },
   pomodoroConfig: { workMinutes: 25, breakMinutes: 5 },
   locale: "en",
   nightModeManualOverride: false,
@@ -217,7 +217,7 @@ export function useGameState(): GameState {
     persist({ ...prev, nightModeManualOverride: v });
   }, [persist]);
 
-  const incrementGamesPlayed = useCallback((game: "catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge") => {
+  const incrementGamesPlayed = useCallback((game: "catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | "whack" | "snake" | "flappy" | "puzzle" | "colorMatch" | "rhythm") => {
     const prev = stateRef.current;
     const gamesPlayed = { ...prev.gamesPlayed, [game]: (prev.gamesPlayed?.[game] ?? 0) + 1 };
     persist({ ...prev, gamesPlayed });
