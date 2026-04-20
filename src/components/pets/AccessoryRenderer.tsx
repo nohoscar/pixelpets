@@ -64,6 +64,42 @@ function renderAccessorySvg(id: AccessoryId, facing: "left" | "right") {
           <circle cx="16" cy="2" r="1.2" fill="#fff" />
         </g>
       );
+    case "witch-hat":
+      return (
+        <g transform={transform}>
+          <polygon points="16,0 8,10 24,10" fill="#2d1b69" />
+          <rect x="7" y="9" width="18" height="3" rx="1" fill="#1a0f40" />
+          <rect x="13" y="6" width="6" height="2" rx="1" fill="#ff8c00" />
+        </g>
+      );
+    case "santa-hat":
+      return (
+        <g transform={transform}>
+          <path d="M10 8 Q16 -2 22 8 L20 10 L12 10 Z" fill="#cc0000" />
+          <rect x="9" y="8" width="14" height="3" rx="1" fill="#fff" />
+          <circle cx="22" cy="2" r="2" fill="#fff" />
+        </g>
+      );
+    case "heart-crown":
+      return (
+        <g transform={transform}>
+          <path d="M12 6 Q12 2 16 4 Q20 2 20 6 L16 10 Z" fill="#ff1493" />
+          <path d="M9 6 Q9 3 12 4 Q15 3 15 6 L12 9 Z" fill="#ff69b4" opacity="0.7" />
+          <path d="M17 6 Q17 3 20 4 Q23 3 23 6 L20 9 Z" fill="#ff69b4" opacity="0.7" />
+        </g>
+      );
+    case "summer-sunglasses":
+      return (
+        <g transform={transform}>
+          <rect x="9" y="11" width="6" height="4" rx="1" fill="#1a1a1a" opacity="0.8" />
+          <rect x="17" y="11" width="6" height="4" rx="1" fill="#1a1a1a" opacity="0.8" />
+          <line x1="15" y1="13" x2="17" y2="13" stroke="#1a1a1a" strokeWidth="0.8" />
+          <line x1="9" y1="12" x2="7" y2="11" stroke="#1a1a1a" strokeWidth="0.6" />
+          <line x1="23" y1="12" x2="25" y2="11" stroke="#1a1a1a" strokeWidth="0.6" />
+          <rect x="9" y="11" width="6" height="2" rx="0.5" fill="#ff6b00" opacity="0.3" />
+          <rect x="17" y="11" width="6" height="2" rx="0.5" fill="#ff6b00" opacity="0.3" />
+        </g>
+      );
     default:
       return null;
   }
@@ -86,6 +122,7 @@ export function AccessoryRenderer({ equipped, facing, petSize, petState }: Acces
       height={petSize}
       className="absolute inset-0 pointer-events-none"
       style={{
+        zIndex: 10,
         opacity: isFainted ? 0.55 : 1,
         filter: isFainted ? "grayscale(0.6) brightness(0.8)" : undefined,
       }}
