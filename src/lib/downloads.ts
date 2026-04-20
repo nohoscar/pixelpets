@@ -16,7 +16,7 @@
 
 const GITHUB_USER = "nohoscar";     // ← tu usuario de GitHub
 const GITHUB_REPO = "pixelpets";    // ← tu repo
-const RELEASE_TAG = "v2.0.0";       // ← cámbialo cuando publiques una versión nueva
+const RELEASE_TAG = "v2.1.0";       // ← cámbialo cuando publiques una versión nueva
 
 const releaseBase = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/${RELEASE_TAG}`;
 
