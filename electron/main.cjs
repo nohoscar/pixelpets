@@ -8,12 +8,44 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, screen, shell, ipcMain, Not
 const path = require("path");
 const fs = require("fs");
 
+const CURRENT_VERSION = "2.1.0";
+const GITHUB_API = "https://api.github.com/repos/nohoscar/pixelpets/releases/latest";
+
 let panelWindow = null;
 let petWindow = null;
 let tray = null;
 let currentPet = "cat";
 let followCursor = false;
 let petVisible = true;
+
+// --- Update Checker ---
+async function checkForUpdates() {
+  try {
+    const https = require("https");
+    const data = await new Promise((resolve, reject) => {
+      https.get(GITHUB_API, { headers: { "User-Agent": "PixelPets" } }, (res) => {
+        let body = "";
+        res.on("data", (chunk) => body += chunk);
+        res.on("end", () => resolve(JSON.parse(body)));
+        res.on("error", reject);
+      }).on("error", reject);
+    });
+
+    const latestTag = data.tag_name; // e.g. "v2.2.0"
+    const latestVersion = latestTag.replace("v", "");
+
+    if (latestVersion !== CURRENT_VERSION) {
+      const notification = new Notification({
+        title: "PixelPets Update Available! 🐾",
+        body: `Version ${latestVersion} is available. Click to download.`,
+      });
+      notification.on("click", () => {
+        shell.openExternal(data.html_url);
+      });
+      notification.show();
+    }
+  } catch {} // silently fail
+}
 
 const preloadPath = path.join(__dirname, "preload.cjs");
 
@@ -124,6 +156,12 @@ function createPanelWindow() {
   });
 
   panelWindow.loadURL(buildPanelUrl());
+
+  // Minimize to tray instead of quitting when panel is closed
+  panelWindow.on("close", (e) => {
+    e.preventDefault();
+    panelWindow.hide();
+  });
   panelWindow.on("closed", () => { panelWindow = null; });
 
   // Open external links in the system browser instead of a new Electron window.
@@ -186,6 +224,15 @@ function togglePanel() {
   }
 }
 
+function showPanel() {
+  if (panelWindow) {
+    panelWindow.show();
+    panelWindow.focus();
+  } else {
+    createPanelWindow();
+  }
+}
+
 function buildTrayIcon() {
   const size = 16;
   const buf = Buffer.alloc(size * size * 4);
@@ -204,15 +251,15 @@ function buildTrayIcon() {
 
 function buildMenu() {
   return Menu.buildFromTemplate([
-    { label: "PixelPets 🐾", enabled: false },
+    { label: `PixelPets 🐾 v${CURRENT_VERSION}`, enabled: false },
     { type: "separator" },
     {
       label: petWindow && petVisible ? "Ocultar mascota" : "Mostrar mascota",
       click: togglePetVisibility,
     },
     {
-      label: "Abrir panel de control",
-      click: togglePanel,
+      label: "Mostrar panel de control",
+      click: showPanel,
     },
     { type: "separator" },
     {
@@ -235,7 +282,30 @@ function buildMenu() {
       click: (item) => { followCursor = item.checked; reloadPet(); },
     },
     { type: "separator" },
-    { label: "Salir", role: "quit" },
+    {
+      label: "Iniciar con Windows",
+      type: "checkbox",
+      checked: app.getLoginItemSettings().openAtLogin,
+      click: (item) => {
+        app.setLoginItemSettings({ openAtLogin: item.checked });
+      },
+    },
+    {
+      label: "Buscar actualizaciones",
+      click: () => { checkForUpdates(); },
+    },
+    { type: "separator" },
+    {
+      label: "Salir",
+      click: () => {
+        // Destroy panel window properly before quitting
+        if (panelWindow) {
+          panelWindow.removeAllListeners("close");
+          panelWindow.close();
+        }
+        app.quit();
+      },
+    },
   ]);
 }
 
@@ -279,6 +349,10 @@ app.whenReady().then(() => {
   tray = new Tray(buildTrayIcon());
   tray.setToolTip("PixelPets — tu mascotita está viva 🐾");
   tray.setContextMenu(buildMenu());
+
+  // Update checker: 10 seconds after launch, then every 6 hours
+  setTimeout(checkForUpdates, 10000);
+  setInterval(checkForUpdates, 6 * 60 * 60 * 1000);
 
   // Battery monitoring via Electron's powerMonitor
   const { powerMonitor } = require("electron");
@@ -376,12 +450,10 @@ app.whenReady().then(() => {
   }, 60 * 60 * 1000); // 60 minutes
 });
 
-// Keep app alive on macOS even if all windows close.
+// Keep app alive in tray even if all windows close.
 app.on("window-all-closed", (e) => {
-  if (process.platform !== "darwin") {
-    // On Win/Linux, stay alive in tray.
-    e.preventDefault();
-  }
+  // Stay alive in tray on all platforms.
+  e.preventDefault();
 });
 
 app.on("activate", () => {
