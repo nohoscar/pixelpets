@@ -24,6 +24,7 @@ export interface PersistedGameState {
   ambientSound: string;   // "rain" | "lofi" | "nature" | "silent"
   evolvedPets: string[];  // pet kinds that have been evolved (animation shown once)
   petXpHistory: Record<string, number>; // petKind → total XP earned
+  diaryEntries: { date: string; text: string }[];
 }
 
 export interface GameActions {
@@ -43,6 +44,7 @@ export interface GameActions {
   setAmbientSound: (sound: string) => void;
   markEvolved: (kind: string) => void;
   addPetXp: (kind: string, amount: number) => void;
+  addDiaryEntry: (text: string) => void;
 }
 
 export type GameState = PersistedGameState & GameActions & {
@@ -94,6 +96,7 @@ const DEFAULT_STATE: PersistedGameState = {
   ambientSound: "silent",
   evolvedPets: [],
   petXpHistory: {},
+  diaryEntries: [],
 };
 
 export function calculateLevel(xp: number): number {
@@ -259,6 +262,16 @@ export function useGameState(): GameState {
     persist({ ...prev, petXpHistory: { ...prev.petXpHistory, [kind]: current + amount } });
   }, [persist]);
 
+  const addDiaryEntry = useCallback((text: string) => {
+    const prev = stateRef.current;
+    const today = new Date().toISOString().slice(0, 10);
+    const entry = { date: today, text };
+    const entries = [...(prev.diaryEntries || []), entry];
+    // Max 30 entries, remove oldest when full
+    while (entries.length > 30) entries.shift();
+    persist({ ...prev, diaryEntries: entries });
+  }, [persist]);
+
   // Achievement checking — debounced, runs at most once per 2 seconds after state changes
   const achievementCallbackRef = useRef<((name: string, icon: string) => void) | null>(null);
   const achievementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -306,6 +319,7 @@ export function useGameState(): GameState {
     setAmbientSound,
     markEvolved,
     addPetXp,
+    addDiaryEntry,
     achievementCallbackRef,
   };
 }

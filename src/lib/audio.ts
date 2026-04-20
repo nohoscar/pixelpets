@@ -326,3 +326,75 @@ export function playSound(name: SoundName) {
       break;
   }
 }
+
+// Pet Voice Sounds — Animal Crossing style synthesized voices per pet type
+export function playVoice(kind: string) {
+  const s = readState();
+  if (s.muted || s.volume <= 0) return;
+
+  const voiceGain = 0.1; // Very low volume so it's subtle
+
+  switch (kind) {
+    case "cat":
+      // Short high sine chirps — "mew mew"
+      tone({ freq: 800, freqEnd: 1200, duration: 0.05, type: "sine", gain: voiceGain });
+      tone({ freq: 900, freqEnd: 1100, duration: 0.05, type: "sine", gain: voiceGain, delay: 0.08 });
+      tone({ freq: 1000, freqEnd: 1200, duration: 0.05, type: "sine", gain: voiceGain, delay: 0.16 });
+      break;
+    case "dog":
+    case "doge":
+      // Medium square wave barks — "woof"
+      tone({ freq: 300, freqEnd: 500, duration: 0.08, type: "square", gain: voiceGain });
+      tone({ freq: 350, freqEnd: 450, duration: 0.08, type: "square", gain: voiceGain, delay: 0.12 });
+      break;
+    case "slime":
+    case "shoggoth":
+      // Bubbly sine sweep — "blub"
+      tone({ freq: 200, freqEnd: 400, duration: 0.08, type: "sine", gain: voiceGain });
+      tone({ freq: 400, freqEnd: 200, duration: 0.08, type: "sine", gain: voiceGain, delay: 0.08 });
+      break;
+    case "robot":
+    case "dalek":
+    case "bb8":
+      // Beepy square — "beep boop"
+      tone({ freq: 1000, duration: 0.03, type: "square", gain: voiceGain });
+      tone({ freq: 1500, duration: 0.03, type: "square", gain: voiceGain, delay: 0.05 });
+      tone({ freq: 2000, duration: 0.03, type: "square", gain: voiceGain, delay: 0.1 });
+      tone({ freq: 1200, duration: 0.03, type: "square", gain: voiceGain, delay: 0.15 });
+      break;
+    case "dragon":
+      // Low growl — "grr"
+      tone({ freq: 80, freqEnd: 120, duration: 0.2, type: "sawtooth", gain: voiceGain });
+      noise({ duration: 0.15, filter: 200, gain: voiceGain * 0.5 });
+      break;
+    case "ghost":
+    case "yurei":
+      // Whisper — filtered noise, very quiet — "wooo"
+      noise({ duration: 0.3, filter: 800, gain: voiceGain * 0.4 });
+      break;
+    case "pikachu":
+      // Electric zap — sine sweep — "pika"
+      tone({ freq: 1000, freqEnd: 3000, duration: 0.1, type: "sine", gain: voiceGain });
+      break;
+    case "parrot":
+    case "chocobo":
+    case "owl":
+      // Tweet — high sine chirps — "tweet"
+      tone({ freq: 2000, duration: 0.04, type: "sine", gain: voiceGain });
+      tone({ freq: 2500, duration: 0.04, type: "sine", gain: voiceGain, delay: 0.06 });
+      tone({ freq: 3000, duration: 0.04, type: "sine", gain: voiceGain, delay: 0.12 });
+      break;
+    case "cthulhu":
+    case "blackgoat":
+    case "necronomicon":
+      // Eldritch — very low sawtooth + detuned — "grumble"
+      tone({ freq: 30, freqEnd: 50, duration: 0.3, type: "sawtooth", gain: voiceGain });
+      tone({ freq: 33, freqEnd: 47, duration: 0.3, type: "sawtooth", gain: voiceGain * 0.7, delay: 0.02 });
+      break;
+    default:
+      // Generic chirp — "chirp chirp"
+      tone({ freq: 600, freqEnd: 900, duration: 0.06, type: "sine", gain: voiceGain });
+      tone({ freq: 700, freqEnd: 850, duration: 0.06, type: "sine", gain: voiceGain, delay: 0.1 });
+      break;
+  }
+}

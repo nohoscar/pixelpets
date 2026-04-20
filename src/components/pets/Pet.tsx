@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { PETS, type PetKind } from "./petSprites";
 import { randomThought, moodThought } from "./petThoughts";
-import { playSound } from "@/lib/audio";
+import { playSound, playVoice } from "@/lib/audio";
 import type { SystemAwareness } from "@/hooks/useSystemAwareness";
 import type { GameState } from "@/hooks/useGameState";
 import { AccessoryRenderer } from "./AccessoryRenderer";
@@ -150,6 +150,7 @@ export function Pet({
       else if (s.happiness > 80 && s.hunger > 60 && Math.random() < 0.4) msg = moodThought("happy");
       else msg = randomThought(kind);
       setBubble(msg);
+      playVoice(kind);
       setTimeout(() => setBubble(null), 2400);
     }, 6000);
     return () => clearInterval(id);
@@ -606,6 +607,56 @@ export function Pet({
 
   // Music detection → pet dances and reacts
   const musicReactedRef = useRef(false);
+
+  // Random events system (Feature 2)
+  const randomEventTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const scheduleEvent = () => {
+      const delay = (60 + Math.random() * 60) * 1000; // 60-120 seconds
+      randomEventTimerRef.current = setTimeout(() => {
+        // Only trigger when walking (not sleeping, dragging, fainted, paused)
+        if (stateRef.current !== "walk" || paused) {
+          scheduleEvent();
+          return;
+        }
+        // 20% chance
+        if (Math.random() > 0.2) {
+          scheduleEvent();
+          return;
+        }
+        const events = [
+          { msg: "¡Encontré un tesoro! 💎", xp: 15, happiness: 10, sound: "coin" as const },
+          { msg: "¡Lluvia de estrellas! ⭐", happiness: 10, particles: "confetti" as const, sound: "happy" as const },
+          { msg: "¡Tuve un sueño raro! 💭" },
+          { msg: "¡Encontré comida! 🍕", hunger: 20, sound: "happy" as const },
+          { msg: "¡Hice un amigo invisible! 👻", happiness: 15, sound: "happy" as const },
+          { msg: "¡Me dio hipo! 😵", bubbleText: "hic! hic!" },
+          { msg: "¡Encontré una moneda! 🪙", xp: 10, sound: "coin" as const },
+          { msg: "¡Vi una mariposa! 🦋", happiness: 5, particles: "stars" as const, sound: "happy" as const },
+        ];
+        const event = events[Math.floor(Math.random() * events.length)];
+        speak(event.bubbleText || event.msg, 2500);
+        if (event.xp && gameState) {
+          gameState.addXp(event.xp);
+          gameState.addPetXp(kind, event.xp);
+        }
+        if (event.happiness || event.hunger) {
+          setStats((s) => ({
+            ...s,
+            happiness: Math.min(100, s.happiness + (event.happiness || 0)),
+            hunger: Math.min(100, s.hunger + (event.hunger || 0)),
+          }));
+        }
+        if (event.particles) emitParticles(event.particles);
+        if (event.sound) playSound(event.sound);
+        scheduleEvent();
+      }, delay);
+    };
+    scheduleEvent();
+    return () => {
+      if (randomEventTimerRef.current) clearTimeout(randomEventTimerRef.current);
+    };
+  }, [kind, paused, gameState, emitParticles]);
   useEffect(() => {
     if (!awareness) return;
     if (awareness.musicDetected && !musicReactedRef.current) {

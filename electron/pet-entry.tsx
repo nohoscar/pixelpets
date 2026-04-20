@@ -19,6 +19,41 @@ declare global {
   }
 }
 
+function DesktopClock() {
+  const [time, setTime] = useState(() => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  });
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+    };
+    const id = setInterval(update, 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div style={{
+      position: "fixed",
+      bottom: 20,
+      right: 20,
+      padding: "4px 8px",
+      borderRadius: 6,
+      background: "rgba(20, 16, 40, 0.7)",
+      border: "1px solid rgba(122, 245, 176, 0.3)",
+      fontFamily: "'Press Start 2P', monospace",
+      fontSize: 10,
+      color: "#7af5b0",
+      zIndex: 5,
+      pointerEvents: "none",
+    }}>
+      {time}
+    </div>
+  );
+}
+
 function PetOverlay() {
   const [kind, setKind] = useState<PetKind>("cat");
   const [followCursor, setFollowCursor] = useState(false);
@@ -111,4 +146,9 @@ function PetOverlay() {
 }
 
 const root = document.getElementById("root");
-if (root) createRoot(root).render(<PetOverlay />);
+if (root) createRoot(root).render(
+  <>
+    <PetOverlay />
+    {window.pixelpets && <DesktopClock />}
+  </>
+);

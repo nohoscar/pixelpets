@@ -31,6 +31,7 @@ import { AmbientSound } from "@/components/AmbientSound";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { Leaderboard } from "@/components/Leaderboard";
 import { SeasonalBackground } from "@/components/SeasonalBackground";
+import { PetDiary } from "@/components/PetDiary";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -452,6 +453,7 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
           {gameState && Object.keys(gameState.petXpHistory).length > 0 && (
             <Leaderboard gameState={gameState} />
           )}
+          <PetDiary gameState={gameState} />
           <WidgetPanel />
           <VolumeControl />
         </div>
