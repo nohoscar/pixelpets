@@ -369,41 +369,28 @@ app.whenReady().then(() => {
   // Send initial state after windows load
   setTimeout(sendBattery, 3000);
 
-  // Music detection — check if music process names exist (cheaper than getting all window titles)
+  // Music detection — async, non-blocking check for music process names
   let lastMusicState = false;
-  const musicProcessNames = ["spotify", "vlc", "foobar2000", "itunes", "musicbee", "winamp", "tidal"];
+  const { exec } = require("child_process");
   const checkMusic = () => {
-    try {
-      if (process.platform === "win32") {
-        const { execSync } = require("child_process");
-        try {
-          const processFilter = musicProcessNames.map((p) => `Name='${p}'`).join(" OR ");
-          const output = execSync(
-            `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"${processFilter}\\" | Select-Object -First 1 -ExpandProperty Name"`,
-            { encoding: "utf8", timeout: 3000, stdio: ["pipe", "pipe", "ignore"] }
-          );
-          const isPlaying = output.trim().length > 0;
-          if (isPlaying !== lastMusicState) {
-            lastMusicState = isPlaying;
-            const info = { musicDetected: isPlaying };
-            if (petWindow) petWindow.webContents.send("music-update", info);
-            if (panelWindow) panelWindow.webContents.send("music-update", info);
-          }
-        } catch {
-          // PowerShell failed or no music process found
-          if (lastMusicState) {
-            lastMusicState = false;
-            const info = { musicDetected: false };
-            if (petWindow) petWindow.webContents.send("music-update", info);
-            if (panelWindow) panelWindow.webContents.send("music-update", info);
-          }
+    if (process.platform !== "win32") return;
+    exec(
+      'powershell -NoProfile -Command "Get-Process spotify,vlc,foobar2000,itunes,musicbee,winamp,tidal -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Name"',
+      { timeout: 2000 },
+      (err, stdout) => {
+        const isPlaying = !err && stdout.trim().length > 0;
+        if (isPlaying !== lastMusicState) {
+          lastMusicState = isPlaying;
+          const info = { musicDetected: isPlaying };
+          if (petWindow) petWindow.webContents.send("music-update", info);
+          if (panelWindow) panelWindow.webContents.send("music-update", info);
         }
       }
-    } catch {}
+    );
   };
-  // Check every 15 seconds (reduced from 5s)
-  setInterval(checkMusic, 15000);
-  setTimeout(checkMusic, 15000);
+  // Check every 30 seconds — non-blocking async
+  setInterval(checkMusic, 30000);
+  setTimeout(checkMusic, 30000);
 
   // --- Notification Reminders ---
   let lastInteractionTime = Date.now();

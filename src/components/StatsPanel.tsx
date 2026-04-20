@@ -79,26 +79,30 @@ export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep,
         <Bar label={t("stats.energy")} value={stats.energy} color="hsl(150 80% 55%)" />
       </div>
 
-      {/* XP / Level display */}
+      {/* XP / Level display — enhanced visibility */}
       {gameState && (
         <div className="mb-4 pt-3 border-t border-border/50">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[9px] font-display text-neon">{t("stats.level")} {currentLevel}</span>
-            <span className="text-[9px] font-display text-muted-foreground">{currentXp} XP</span>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-display text-neon font-bold">LVL {currentLevel}</span>
+            <span className="text-[10px] font-display text-foreground">{xpInLevel}/{xpNeeded} XP</span>
           </div>
-          <div className="h-2 bg-secondary/60 rounded-full overflow-hidden">
+          <div className={`h-3 bg-secondary/60 rounded-full overflow-hidden ${xpProgress > 80 ? "shadow-[0_0_12px_hsl(270_80%_65%)]" : ""}`}>
             <div
-              className="h-full transition-all duration-500 rounded-full"
+              className={`h-full transition-all duration-500 rounded-full ${xpProgress > 80 ? "animate-pulse" : ""}`}
               style={{
                 width: `${xpProgress}%`,
-                background: "hsl(270 80% 65%)",
-                boxShadow: "0 0 10px hsl(270 80% 65%)",
+                background: xpProgress > 80
+                  ? "linear-gradient(90deg, hsl(270 80% 65%), hsl(300 80% 65%))"
+                  : "hsl(270 80% 65%)",
+                boxShadow: xpProgress > 80
+                  ? "0 0 16px hsl(270 80% 65%), 0 0 4px hsl(300 80% 65%)"
+                  : "0 0 10px hsl(270 80% 65%)",
               }}
             />
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <p className="text-[8px] text-muted-foreground">
-              {xpInLevel}/{xpNeeded} → {t("stats.level")} {currentLevel + 1}
+          <div className="flex items-center justify-between mt-1.5">
+            <p className="text-[9px] text-muted-foreground">
+              {xpNeeded - xpInLevel} XP to LVL {currentLevel + 1}
             </p>
             {gameState.streakDays > 0 && (
               <span
@@ -112,6 +116,21 @@ export function StatsPanel({ stats, petName, awareness, onFeed, onPlay, onSleep,
               </span>
             )}
           </div>
+          {/* Next unlock hint */}
+          {(() => {
+            const nextUnlock = [
+              { level: 2, name: "Basic Hat 🎩" },
+              { level: 3, name: "Glasses 👓" },
+              { level: 5, name: "Bow 🎀" },
+              { level: 7, name: "Scarf 🧣" },
+              { level: 10, name: "Cape 🦸" },
+            ].find((u) => u.level > currentLevel);
+            return nextUnlock ? (
+              <p className="text-[8px] text-muted-foreground mt-1 italic">
+                Next: {nextUnlock.name} at LVL {nextUnlock.level}
+              </p>
+            ) : null;
+          })()}
         </div>
       )}
 

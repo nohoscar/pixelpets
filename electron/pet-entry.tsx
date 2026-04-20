@@ -36,12 +36,12 @@ function PetOverlay() {
     if (params.get("follow") === "1") setFollowCursor(true);
   }, []);
 
-  // Track mouse position and do hit-testing against the pet element
-  // Track mouse position and do hit-testing with debounce to prevent cursor flickering
+  // Track mouse position and do hit-testing with asymmetric debounce
+  // Enter pet area: respond quickly (150ms). Leave pet area: delay 300ms to prevent flicker.
   useEffect(() => {
     let lastHit = false;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    
+
     const handler = (e: MouseEvent) => {
       cursorRef.current = { x: e.clientX, y: e.clientY };
 
@@ -50,19 +50,25 @@ function PetOverlay() {
       const isOverPet = el !== null && el !== document.body && el !== document.documentElement
         && el.id !== "root" && !el.matches("#root");
 
-      if (isOverPet !== lastHit) {
-        // Debounce: wait 50ms before changing to avoid rapid flickering
+      if (isOverPet && !lastHit) {
+        // Entering pet area — respond quickly
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-          // Re-check after debounce
           const elNow = document.elementFromPoint(e.clientX, e.clientY);
           const stillOverPet = elNow !== null && elNow !== document.body && elNow !== document.documentElement
             && elNow.id !== "root" && !elNow.matches("#root");
-          if (stillOverPet !== lastHit) {
-            lastHit = stillOverPet;
-            window.pixelpets?.setMouseHit(stillOverPet);
+          if (stillOverPet && !lastHit) {
+            lastHit = true;
+            window.pixelpets?.setMouseHit(true);
           }
-        }, 50);
+        }, 150);
+      } else if (!isOverPet && lastHit) {
+        // Leaving pet area — delay before ignoring again to prevent flicker
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          lastHit = false;
+          window.pixelpets?.setMouseHit(false);
+        }, 300);
       }
     };
     window.addEventListener("mousemove", handler);

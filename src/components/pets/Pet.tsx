@@ -106,11 +106,16 @@ export function Pet({
   // Personality modifiers
   const personality = getPersonality(kind);
 
-  // Decay stats over time (every 6s)
+  // Consolidated timer: stat decay + idle thoughts in a single interval (every 6s)
+  // Thoughts fire probabilistically within the same tick to reduce timer count.
+  const statsRef = useRef(stats);
+  statsRef.current = stats;
+  const thoughtCooldownRef = useRef(0);
+
   useEffect(() => {
     const id = setInterval(() => {
+      // --- Stat decay ---
       setStats((s) => {
-        // Cthulhu gets chaotic random multipliers each tick
         const p = kind === "cthulhu" ? { ...personality, ...getChaosMultipliers() } : personality;
         const next: PetStats = {
           ...s,
@@ -120,13 +125,32 @@ export function Pet({
             ? Math.min(100, s.energy + 6 * p.sleepRecovery)
             : Math.max(0, s.energy - 1 * p.energyDecay),
         };
-        // Seasonal bonus: +2 to the bonus stat during active event
         const season = getCurrentSeason();
         if (season) {
           next[season.petBonus] = Math.min(100, next[season.petBonus] + 2);
         }
         return next;
       });
+
+      // --- Idle thoughts (every ~14-26s equivalent: fire with ~35% chance per 6s tick) ---
+      thoughtCooldownRef.current -= 6;
+      if (thoughtCooldownRef.current > 0) return;
+
+      const st = stateRef.current;
+      const s = statsRef.current;
+      if (st === "sleep" || st === "drag" || st === "faint") return;
+      if (Math.random() < 0.65) return; // ~35% chance per tick ≈ every 17s on average
+
+      thoughtCooldownRef.current = 8; // minimum 8s between thoughts
+
+      let msg: string;
+      if (s.hunger < 30 && Math.random() < 0.6) msg = moodThought("hungry");
+      else if (s.happiness < 30 && Math.random() < 0.6) msg = moodThought("sad");
+      else if (s.energy < 25 && Math.random() < 0.6) msg = moodThought("tired");
+      else if (s.happiness > 80 && s.hunger > 60 && Math.random() < 0.4) msg = moodThought("happy");
+      else msg = randomThought(kind);
+      setBubble(msg);
+      setTimeout(() => setBubble(null), 2400);
     }, 6000);
     return () => clearInterval(id);
   }, [kind, personality]);
@@ -277,33 +301,6 @@ export function Pet({
       }, 1500);
     }
   }, [gameState?.level, gameState?.evolvedPets, kind, emitParticles]);
-
-  // Idle thoughts: every ~14-26s pick a random thought (themed or mood-based).
-  // Skipped while sleeping/fainted/dragging to not be annoying.
-  const statsRef = useRef(stats);
-  statsRef.current = stats;
-  useEffect(() => {
-    const tick = () => {
-      const st = stateRef.current;
-      const s = statsRef.current;
-      if (st === "sleep" || st === "drag" || st === "faint") return;
-      // 50% chance to skip — feels more natural, less spammy
-      if (Math.random() < 0.5) return;
-      // Pick mood line if a stat is in trouble, else themed/universal
-      let msg: string;
-      if (s.hunger < 30 && Math.random() < 0.6) msg = moodThought("hungry");
-      else if (s.happiness < 30 && Math.random() < 0.6) msg = moodThought("sad");
-      else if (s.energy < 25 && Math.random() < 0.6) msg = moodThought("tired");
-      else if (s.happiness > 80 && s.hunger > 60 && Math.random() < 0.4) msg = moodThought("happy");
-      else msg = randomThought(kind);
-      setBubble(msg);
-      setTimeout(() => setBubble(null), 2400);
-    };
-    // Initial delay then random interval
-    const first = setTimeout(tick, 4000 + Math.random() * 4000);
-    const id = setInterval(tick, 14000 + Math.random() * 12000);
-    return () => { clearTimeout(first); clearInterval(id); };
-  }, [kind]);
 
   // Imperative actions exposed to parent
   useEffect(() => {
