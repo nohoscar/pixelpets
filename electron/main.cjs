@@ -132,9 +132,10 @@ function buildPanelUrl() {
     path.join(process.resourcesPath || "", "app", "panel-dist", "electron", "panel.html"),
   ];
   for (const c of candidates) {
+    console.log("[PixelPets] Checking panel path:", c, "exists:", fs.existsSync(c));
     if (fs.existsSync(c)) return `file:///${c.replace(/\\/g, "/")}`;
   }
-  // Should never reach here if packaged correctly
+  console.log("[PixelPets] WARNING: No panel.html found!");
   return `file:///${candidates[0].replace(/\\/g, "/")}`;
 }
 
