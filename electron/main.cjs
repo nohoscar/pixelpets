@@ -126,17 +126,16 @@ function buildPetUrl() {
 
 function buildPanelUrl() {
   // Panel is built separately by vite.panel.config.ts
+  // When packaged: app.asar contains panel-dist/electron/panel.html
   const candidates = [
     path.join(__dirname, "panel-dist", "electron", "panel.html"),
-    path.join(__dirname, "..", "electron", "panel-dist", "electron", "panel.html"),
     path.join(process.resourcesPath || "", "app", "panel-dist", "electron", "panel.html"),
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) return `file:///${c.replace(/\\/g, "/")}`;
   }
-  // Fallback to old method
-  const file = resolveAppEntry().replace(/\\/g, "/");
-  return `file:///${file}`;
+  // Should never reach here if packaged correctly
+  return `file:///${candidates[0].replace(/\\/g, "/")}`;
 }
 
 function createPanelWindow() {
