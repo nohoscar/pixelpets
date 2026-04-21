@@ -36,3 +36,5 @@ electron/panel-dist/
 *.njsproj
 *.sln
 *.sw?
+
+electron-release2/

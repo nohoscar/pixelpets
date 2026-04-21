@@ -168,7 +168,7 @@ export function ControlPanel({
         {gameState && onStartGame && (
           <Accordion title="MUNDOS" icon="🗺️" badge="5">
             <div className="mt-2">
-              <AdventureMode gameState={gameState} onStartBossFight={(g) => onStartGame(g as any)} />
+              <AdventureMode gameState={gameState} onStartBossFight={(g) => onStartGame(g as any)} activePetKind={activePetKind} />
             </div>
           </Accordion>
         )}
