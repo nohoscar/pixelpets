@@ -8,7 +8,7 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, screen, shell, ipcMain, Not
 const path = require("path");
 const fs = require("fs");
 
-const CURRENT_VERSION = "2.1.0";
+const CURRENT_VERSION = "2.3.0";
 const GITHUB_API = "https://api.github.com/repos/nohoscar/pixelpets/releases/latest";
 
 let panelWindow = null;
