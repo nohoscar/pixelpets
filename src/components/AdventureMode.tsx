@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { WORLDS, type AdventureWorld } from "@/lib/adventureSystem";
 import type { GameState } from "@/hooks/useGameState";
 
@@ -9,68 +9,74 @@ interface Props {
 
 export function AdventureMode({ gameState, onStartBossFight }: Props) {
   const [selectedWorld, setSelectedWorld] = useState<AdventureWorld | null>(null);
-  const [exploring, setExploring] = useState<{ worldId: string; stageId: string; duration: number; startedAt: number } | null>(null);
+  const [exploring, setExploring] = useState(false);
+  const [exploreInfo, setExploreInfo] = useState<{ worldId: string; stageId: string; worldIcon: string; stageName: string; stageDesc: string; xp: number; food: string } | null>(null);
   const [progress, setProgress] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gameStateRef = useRef(gameState);
   gameStateRef.current = gameState;
 
-  // Exploration timer — fully local, no dependency on gameState
-  useEffect(() => {
-    if (!exploring) { setProgress(0); return; }
-
-    const { worldId, stageId, duration, startedAt } = exploring;
+  const startExplore = useCallback((worldId: string, stageId: string) => {
     const world = WORLDS.find((w) => w.id === worldId);
     const stage = world?.stages.find((s) => s.id === stageId);
-    if (!world || !stage) { setExploring(null); return; }
+    if (!world || !stage) return;
 
-    const id = setInterval(() => {
+    // Clear any existing timer
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    setExploreInfo({
+      worldId, stageId,
+      worldIcon: world.icon,
+      stageName: stage.name,
+      stageDesc: stage.description,
+      xp: stage.xpReward,
+      food: stage.foodReward || "",
+    });
+    setExploring(true);
+    setProgress(0);
+
+    const startedAt = Date.now();
+    const duration = stage.durationMs;
+
+    timerRef.current = setInterval(() => {
       const elapsed = Date.now() - startedAt;
       const pct = Math.min(100, (elapsed / duration) * 100);
       setProgress(pct);
 
       if (elapsed >= duration) {
-        clearInterval(id);
-        // Use ref to avoid stale closure
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = null;
+
         const gs = gameStateRef.current;
         gs.addXp(stage.xpReward);
         if (stage.foodReward) gs.addFood(stage.foodReward, 1);
         gs.updateMissionProgress("xp", stage.xpReward);
-        // Mark stage complete in persisted state
         gs.completeAdventureStage(worldId, stageId);
-        setExploring(null);
+
+        setExploring(false);
+        setExploreInfo(null);
         setProgress(0);
       }
-    }, 300);
-
-    return () => clearInterval(id);
-  }, [exploring]); // re-run whenever exploring changes
-
-  const startExplore = (worldId: string, stageId: string) => {
-    const world = WORLDS.find((w) => w.id === worldId);
-    const stage = world?.stages.find((s) => s.id === stageId);
-    if (!stage) return;
-    setExploring({ worldId, stageId, duration: stage.durationMs, startedAt: Date.now() });
-  };
+    }, 250);
+  }, []);
 
   // Exploring view
-  if (exploring) {
-    const world = WORLDS.find((w) => w.id === exploring.worldId);
-    const stage = world?.stages.find((s) => s.id === exploring.stageId);
+  if (exploring && exploreInfo) {
     return (
-      <div className="glass rounded-xl p-4 border border-border/40">
-        <h4 className="font-display text-[9px] text-muted-foreground mb-3">🗺️ EXPLORING...</h4>
-        <div className="text-center py-4">
-          <span className="text-3xl animate-bob inline-block">{world?.icon}</span>
-          <p className="font-display text-xs text-foreground mt-2">{stage?.name}</p>
-          <p className="text-[9px] text-muted-foreground italic mt-1">{stage?.description}</p>
-          <div className="mt-4 h-3 rounded-full bg-background/50 overflow-hidden border border-border/30">
+      <div className="glass rounded-xl p-4 border border-neon/30">
+        <h4 className="font-display text-[9px] text-neon mb-3">🗺️ EXPLORING...</h4>
+        <div className="text-center py-3">
+          <span className="text-3xl animate-bob inline-block">{exploreInfo.worldIcon}</span>
+          <p className="font-display text-xs text-foreground mt-2">{exploreInfo.stageName}</p>
+          <p className="text-[9px] text-muted-foreground italic mt-1">{exploreInfo.stageDesc}</p>
+          <div className="mt-4 h-3 rounded-full bg-background/50 overflow-hidden border border-neon/20">
             <div
-              className="h-full rounded-full bg-neon transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              className="h-full rounded-full transition-all duration-200"
+              style={{ width: `${progress}%`, background: "var(--neon, #7af5b0)" }}
             />
           </div>
-          <p className="text-[9px] text-neon mt-2 font-display">{Math.round(progress)}%</p>
-          <p className="text-[8px] text-muted-foreground mt-1">+{stage?.xpReward}XP {stage?.foodReward ? "🍽️" : ""}</p>
+          <p className="text-sm text-neon mt-2 font-display">{Math.round(progress)}%</p>
+          <p className="text-[8px] text-muted-foreground mt-1">+{exploreInfo.xp}XP {exploreInfo.food ? "· +🍽️" : ""}</p>
         </div>
       </div>
     );
@@ -140,7 +146,7 @@ export function AdventureMode({ gameState, onStartBossFight }: Props) {
 
   // World selection grid
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-3">
       {WORLDS.map((world) => {
         const available = world.requiredLevel <= gameState.level;
         const wp = gameState.adventureProgress?.[world.id];
@@ -157,7 +163,7 @@ export function AdventureMode({ gameState, onStartBossFight }: Props) {
             <span className="text-2xl block">{available ? world.icon : "🔒"}</span>
             <p className="font-display text-[9px] mt-1">{world.name}</p>
             <p className="text-[7px] text-muted-foreground mt-0.5">
-              {!available ? `Lv.${world.requiredLevel} required` : bossDefeated ? "✅ Complete" : `${stagesCount}/${world.stages.length} stages`}
+              {!available ? `Lv.${world.requiredLevel}` : bossDefeated ? "✅ Complete" : `${stagesCount}/${world.stages.length}`}
             </p>
           </button>
         );

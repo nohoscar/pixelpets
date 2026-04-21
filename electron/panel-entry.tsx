@@ -333,30 +333,31 @@ function TabPet({ currentKind, setPet, gameState, stats, currentPetName, awarene
         <DailyMissions gameState={gameState} />
       </div>
 
-      {/* Pet selector — compact */}
-      <div className="glass rounded-xl p-2 border border-border/40">
-        <div className="flex items-center justify-between mb-1">
+      {/* Pet selector */}
+      <div className="glass rounded-xl p-3 border border-border/40">
+        <div className="flex items-center justify-between mb-2">
           <h4 className="font-display text-[8px] text-muted-foreground">SWITCH PET</h4>
           <label className="flex items-center gap-1 cursor-pointer">
             <input type="checkbox" checked={followCursor} onChange={(e) => setFollowCursor(e.target.checked)} className="w-3 h-3 accent-[var(--neon)]" />
             <span className="text-[7px] text-muted-foreground">Follow</span>
           </label>
         </div>
-        <div className="grid grid-cols-12 gap-0.5 max-h-20 overflow-y-auto">
+        <div className="grid grid-cols-5 gap-1.5 max-h-48 overflow-y-auto pr-1">
           {PET_LIST.map((k) => {
             const d = PETS[k];
             return (
               <button
                 key={k}
                 onClick={() => setPet(k)}
-                className={`aspect-square rounded border transition-all flex items-center justify-center ${
+                className={`group relative aspect-square rounded-lg border transition-all p-1 flex flex-col items-center justify-center ${
                   currentKind === k
-                    ? "border-neon bg-neon/10"
-                    : "border-transparent hover:border-neon/40"
+                    ? "border-neon bg-neon/10 shadow-[0_0_8px_var(--neon)]"
+                    : "border-border/30 hover:border-neon/40"
                 }`}
                 title={d.name}
               >
-                <div className="w-4 h-4">{d.render("right", 0)}</div>
+                <div className="w-8 h-8">{d.render("right", 0)}</div>
+                <span className="absolute bottom-0 left-0 right-0 text-[5px] font-display text-center text-muted-foreground group-hover:text-neon truncate px-0.5">{d.name}</span>
               </button>
             );
           })}
