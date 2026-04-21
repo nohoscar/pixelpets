@@ -335,14 +335,14 @@ function TabPet({ currentKind, setPet, gameState, stats, currentPetName, awarene
 
       {/* Pet selector — compact */}
       <div className="glass rounded-xl p-2 border border-border/40">
-        <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center justify-between mb-1">
           <h4 className="font-display text-[8px] text-muted-foreground">SWITCH PET</h4>
           <label className="flex items-center gap-1 cursor-pointer">
             <input type="checkbox" checked={followCursor} onChange={(e) => setFollowCursor(e.target.checked)} className="w-3 h-3 accent-[var(--neon)]" />
             <span className="text-[7px] text-muted-foreground">Follow</span>
           </label>
         </div>
-        <div className="grid grid-cols-10 gap-1 max-h-28 overflow-y-auto">
+        <div className="grid grid-cols-12 gap-0.5 max-h-20 overflow-y-auto">
           {PET_LIST.map((k) => {
             const d = PETS[k];
             return (
@@ -352,11 +352,11 @@ function TabPet({ currentKind, setPet, gameState, stats, currentPetName, awarene
                 className={`aspect-square rounded border transition-all flex items-center justify-center ${
                   currentKind === k
                     ? "border-neon bg-neon/10"
-                    : "border-border/20 hover:border-neon/40"
+                    : "border-transparent hover:border-neon/40"
                 }`}
                 title={d.name}
               >
-                <div className="w-5 h-5">{d.render("right", 0)}</div>
+                <div className="w-4 h-4">{d.render("right", 0)}</div>
               </button>
             );
           })}
