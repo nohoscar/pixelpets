@@ -1,480 +1,118 @@
 import { createFileRoute, ClientOnly, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ControlPanel } from "@/components/ControlPanel";
 import { Pet, type PetStats } from "@/components/pets/Pet";
-import { PETS, type PetKind } from "@/components/pets/petSprites";
-import { StatsPanel } from "@/components/StatsPanel";
-import { VolumeControl } from "@/components/VolumeControl";
+import { PETS, PET_LIST, type PetKind } from "@/components/pets/petSprites";
 import { useSystemAwareness } from "@/hooks/useSystemAwareness";
 import { useGameState } from "@/hooks/useGameState";
 import { CatchGame } from "@/components/games/CatchGame";
 import { MemoryGame } from "@/components/games/MemoryGame";
-import { SimonGame } from "@/components/games/SimonGame";
-import { TypingGame } from "@/components/games/TypingGame";
-import { ReactionGame } from "@/components/games/ReactionGame";
-import { PetQuizGame } from "@/components/games/PetQuizGame";
-import { DodgeGame } from "@/components/games/DodgeGame";
-import { WhackGame } from "@/components/games/WhackGame";
-import { SnakeGame } from "@/components/games/SnakeGame";
-import { FlappyGame } from "@/components/games/FlappyGame";
-import { PuzzleGame } from "@/components/games/PuzzleGame";
-import { ColorMatchGame } from "@/components/games/ColorMatchGame";
-import { RhythmGame } from "@/components/games/RhythmGame";
 import { AchievementToast } from "@/components/AchievementToast";
-import { WidgetPanel } from "@/components/WidgetPanel";
-import { I18nProvider, useI18n } from "@/lib/i18n";
-import { Onboarding, useOnboarding } from "@/components/Onboarding";
-import { applyTheme, type ThemeId } from "@/lib/themes";
+import { I18nProvider } from "@/lib/i18n";
 import { AmbientSound } from "@/components/AmbientSound";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
-import { Leaderboard } from "@/components/Leaderboard";
 import { SeasonalBackground } from "@/components/SeasonalBackground";
-import { PetDiary } from "@/components/PetDiary";
 import { randomThought } from "@/components/pets/petThoughts";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
-interface PetInstance {
-  id: string;
-  kind: PetKind;
-  initialX?: number;
-  initialY?: number;
-}
+const FREE_PETS: PetKind[] = ["cat", "dog", "slime", "dragon", "ghost"];
+const FREE_GAMES = ["catch", "memory"];
 
 function Index() {
   const gameState = useGameState();
-  const { showOnboarding, dismissOnboarding } = useOnboarding();
-
-  // Apply persisted theme on mount
-  useEffect(() => {
-    if (gameState.theme && gameState.theme !== "cyberpunk") {
-      applyTheme(gameState.theme as ThemeId);
-    }
-  }, []);
-
   return (
     <I18nProvider initialLocale={gameState.locale}>
-      {showOnboarding && <Onboarding onDismiss={dismissOnboarding} />}
       <AmbientSound soundId={gameState.ambientSound} />
-      <IndexContent gameState={gameState} />
+      <LandingPage gameState={gameState} />
     </I18nProvider>
   );
 }
 
-function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState> }) {
-  const [pets, setPets] = useState<PetInstance[]>([{ id: "p1", kind: "cat" }]);
-  const [followCursor, setFollowCursor] = useState(false);
-  const [stats, setStats] = useState<PetStats | null>(null);
-  const [activeGame, setActiveGame] = useState<"catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | "whack" | "snake" | "flappy" | "puzzle" | "colorMatch" | "rhythm" | null>(null);
-  const [achievementToast, setAchievementToast] = useState<{ name: string; icon: string } | null>(null);
-  const [activePetId, setActivePetId] = useState<string>("p1");
-  const awareness = useSystemAwareness();
-  const { t } = useI18n();
-
-  const cursorRef = useRef<{ x: number; y: number } | null>(null);
-  const actionRef = useRef<{ feed: () => void; play: () => void; sleep: () => void } | null>(null);
-  const petPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
-  const interactionCooldownRef = useRef<Map<string, number>>(new Map());
-  const petSpeakRefs = useRef<Map<string, { current: ((msg: string) => void) | null }>>(new Map());
-
-  // Mini-game handlers
-  const handleCatchComplete = (score: number) => {
-    const xp = Math.min(50, Math.max(10, score * 3));
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("catch");
-    setActiveGame(null);
-  };
-
-  const handleMemoryComplete = (attempts: number) => {
-    const xp = attempts < 10 ? 50 : attempts <= 15 ? 30 : 15;
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("memory");
-    setActiveGame(null);
-  };
-
-  const handleSimonComplete = (rounds: number) => {
-    const xp = Math.min(50, rounds * 5);
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("simon");
-    setActiveGame(null);
-  };
-
-  const handleTypingComplete = (score: number) => {
-    const xp = Math.min(50, score * 8);
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("typing");
-    setActiveGame(null);
-  };
-
-  const handleReactionComplete = (avgMs: number) => {
-    const xp = avgMs < 300 ? 50 : avgMs < 500 ? 30 : 15;
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("reaction");
-    setActiveGame(null);
-  };
-
-  const handleQuizComplete = (correct: number) => {
-    const xp = Math.min(50, correct * 5);
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("quiz");
-    setActiveGame(null);
-  };
-
-  const handleDodgeComplete = (score: number) => {
-    const xp = Math.min(50, score * 2);
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("dodge");
-    setActiveGame(null);
-  };
-
-  const handleWhackComplete = (score: number) => {
-    const xp = Math.min(50, score * 3);
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("whack");
-    setActiveGame(null);
-  };
-
-  const handleSnakeComplete = (length: number) => {
-    const xp = Math.min(50, length * 3);
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("snake");
-    setActiveGame(null);
-  };
-
-  const handleFlappyComplete = (score: number) => {
-    const xp = Math.min(50, score * 5);
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("flappy");
-    setActiveGame(null);
-  };
-
-  const handlePuzzleComplete = (moves: number) => {
-    const xp = moves < 20 ? 50 : moves < 30 ? 30 : 15;
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("puzzle");
-    setActiveGame(null);
-  };
-
-  const handleColorMatchComplete = (score: number) => {
-    const xp = Math.min(50, Math.round(score * 2.5));
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("colorMatch");
-    setActiveGame(null);
-  };
-
-  const handleRhythmComplete = (score: number) => {
-    const xp = Math.min(50, score * 2);
-    gameState.addXp(xp);
-    if (activePetKind) gameState.addPetXp(activePetKind, xp);
-    gameState.incrementGamesPlayed("rhythm");
-    setActiveGame(null);
-  };
-
-  const handleGameCancel = () => {
-    setActiveGame(null);
-  };
-
-  // Achievement toast handler
-  const showAchievementToast = (name: string, icon: string) => {
-    setAchievementToast({ name, icon });
-    setTimeout(() => setAchievementToast(null), 3000);
-  };
-
-  // Pomodoro callbacks — trigger pet speech bubbles
-  const handlePomodoroWorkEnd = () => {
-    // Trigger speech bubble on all pets
-    petSpeakRefs.current.forEach((ref) => {
-      ref.current?.("Break time! 🍅");
-    });
-  };
-  const handlePomodoroBreakEnd = () => {
-    petSpeakRefs.current.forEach((ref) => {
-      ref.current?.("Back to work! 💪");
-    });
-  };
-
-  // Wire achievement callback to toast
-  useEffect(() => {
-    gameState.achievementCallbackRef.current = showAchievementToast;
-    return () => { gameState.achievementCallbackRef.current = null; };
-  });
-
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      cursorRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener("mousemove", handler);
-    return () => window.removeEventListener("mousemove", handler);
-  }, []);
-
-  // Pet interaction detection (task 9.2)
-  useEffect(() => {
-    if (pets.length < 2) return;
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const positions = petPositionsRef.current;
-      const cooldowns = interactionCooldownRef.current;
-      const phrases = ["hi!", "♥", "play?", "hey!", "✨", "*boop*"];
-
-      for (let i = 0; i < pets.length; i++) {
-        for (let j = i + 1; j < pets.length; j++) {
-          const posA = positions.get(pets[i].id);
-          const posB = positions.get(pets[j].id);
-          if (!posA || !posB) continue;
-
-          const dist = Math.hypot(posA.x - posB.x, posA.y - posB.y);
-          if (dist >= 80) continue;
-
-          const pairKey = [pets[i].id, pets[j].id].sort().join("-");
-          const lastInteraction = cooldowns.get(pairKey) ?? 0;
-          if (now - lastInteraction < 10000) continue;
-
-          cooldowns.set(pairKey, now);
-          const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-          const speakA = petSpeakRefs.current.get(pets[i].id)?.current;
-          const speakB = petSpeakRefs.current.get(pets[j].id)?.current;
-          speakA?.(phrase);
-          speakB?.(phrase);
-        }
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [pets]);
-
-  // Non-overlapping spawn logic (task 9.3)
-  const calculateSpawnPosition = (petSize: number): { x: number; y: number } => {
-    const existing = Array.from(petPositionsRef.current.values());
-    const maxAttempts = 50;
-    for (let i = 0; i < maxAttempts; i++) {
-      const x = Math.random() * (window.innerWidth - petSize - 40) + 20;
-      const y = Math.random() * (window.innerHeight - petSize - 200) + 120;
-      const tooClose = existing.some((pos) => {
-        const dist = Math.hypot(pos.x - x, pos.y - y);
-        return dist < petSize;
-      });
-      if (!tooClose) return { x, y };
-    }
-    // Fallback: random position
-    return {
-      x: Math.random() * (window.innerWidth - petSize - 40) + 20,
-      y: Math.random() * (window.innerHeight - petSize - 200) + 120,
-    };
-  };
-
-  const addPet = (kind: PetKind) => {
-    setPets((prev) => {
-      if (prev.length >= 5) return prev;
-      const newId = `p${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      const petSize = PETS[kind].size;
-      const spawnPos = calculateSpawnPosition(petSize);
-      // Store spawn position for the new pet
-      petPositionsRef.current.set(newId, spawnPos);
-      const newPet: PetInstance = { id: newId, kind, initialX: spawnPos.x, initialY: spawnPos.y };
-      setActivePetId(newId);
-      return [...prev, newPet];
-    });
-  };
-  const removePet = (id: string) => {
-    setPets((p) => p.filter((x) => x.id !== id));
-    petPositionsRef.current.delete(id);
-    setActivePetId((prev) => prev === id ? (pets[0]?.id ?? "") : prev);
-  };
-  const clearPets = () => { setPets([]); setStats(null); petPositionsRef.current.clear(); setActivePetId(""); };
-
-  const activePet = pets.find((p) => p.id === activePetId) ?? pets[0];
-  const activePetKind = activePet?.kind;
-  const currentPetName = activePet
-    ? (gameState.petNames[activePet.kind] || PETS[activePet.kind].name)
-    : "—";
+function LandingPage({ gameState }: { gameState: ReturnType<typeof useGameState> }) {
+  const [demoActive, setDemoActive] = useState(false);
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden">
       <SeasonalBackground />
-      {/* Mobile compact header */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 glass border-b border-border/60">
-        <span className="font-display text-[10px] text-neon">{t("mobile.header")}</span>
-        <Link
-          to="/buy"
-          className="px-3 py-1.5 rounded bg-primary text-primary-foreground font-display text-[9px]"
-        >
-          ▸ {t("buy.free")}
-        </Link>
-      </div>
 
-      {/* Pets layer */}
-      <div className="fixed inset-0 pointer-events-none z-20">
-        <ClientOnly fallback={null}>
-          {pets.map((p) => {
-            // Get or create speakRef for this pet
-            if (!petSpeakRefs.current.has(p.id)) {
-              petSpeakRefs.current.set(p.id, { current: null });
-            }
-            const speakRef = petSpeakRefs.current.get(p.id)!;
-            return (
-              <Pet
-                key={p.id}
-                id={p.id}
-                kind={p.kind}
-                initialX={p.initialX}
-                initialY={p.initialY}
-                cursorRef={cursorRef}
-                followCursor={followCursor}
-                onRemove={removePet}
-                onStatsChange={p.id === (activePet?.id) ? setStats : undefined}
-                actionRef={p.id === (activePet?.id) ? actionRef : undefined}
-                awareness={awareness}
-                gameState={gameState}
-                paused={activeGame !== null}
-                onPositionChange={(pos) => petPositionsRef.current.set(p.id, pos)}
-                onPetClick={() => setActivePetId(p.id)}
-                speakRef={speakRef}
-                customName={gameState.petNames[p.kind] || undefined}
-              />
-            );
-          })}
-        </ClientOnly>
-      </div>
+      {/* ═══════════ HERO SECTION ═══════════ */}
+      <HeroSection onTryDemo={() => setDemoActive(true)} />
 
-      {/* Mini-game overlays */}
-      {activeGame === "catch" && (
-        <CatchGame onComplete={handleCatchComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "memory" && (
-        <MemoryGame onComplete={handleMemoryComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "simon" && (
-        <SimonGame onComplete={handleSimonComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "typing" && (
-        <TypingGame onComplete={handleTypingComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "reaction" && (
-        <ReactionGame onComplete={handleReactionComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "quiz" && (
-        <PetQuizGame onComplete={handleQuizComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "dodge" && (
-        <DodgeGame onComplete={handleDodgeComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "whack" && (
-        <WhackGame onComplete={handleWhackComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "snake" && (
-        <SnakeGame onComplete={handleSnakeComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "flappy" && (
-        <FlappyGame onComplete={handleFlappyComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "puzzle" && (
-        <PuzzleGame onComplete={handlePuzzleComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "colorMatch" && (
-        <ColorMatchGame onComplete={handleColorMatchComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "rhythm" && (
-        <RhythmGame onComplete={handleRhythmComplete} onCancel={handleGameCancel} />
-      )}
-
-      {/* Achievement toast */}
-      {achievementToast && (
-        <AchievementToast name={achievementToast.name} icon={achievementToast.icon} />
-      )}
-
-      {/* UI layer */}
-      <div className="relative z-10 min-h-screen p-4 md:p-8 grid md:grid-cols-[auto_1fr] gap-6 items-start">
-        <div className="w-full max-w-sm flex flex-col gap-4">
-          <ControlPanel
-            followCursor={followCursor}
-            onToggleFollow={setFollowCursor}
-            petCount={pets.length}
-            onAddPet={addPet}
-            onClearPets={clearPets}
-            gameState={gameState}
-            onStartGame={setActiveGame}
-            onAchievementUnlock={showAchievementToast}
-            onPomodoroWorkEnd={handlePomodoroWorkEnd}
-            onPomodoroBreakEnd={handlePomodoroBreakEnd}
-            activePetKind={activePetKind}
-            petName={activePetKind ? (gameState.petNames[activePetKind] ?? "") : ""}
-            onPetNameChange={(name) => { if (activePetKind) gameState.setPetName(activePetKind, name); }}
-          />
-          {pets.length > 0 && (
-            <StatsPanel
-              stats={stats}
-              petName={currentPetName}
-              awareness={awareness}
-              onFeed={() => actionRef.current?.feed()}
-              onPlay={() => actionRef.current?.play()}
-              onSleep={() => actionRef.current?.sleep()}
-              gameState={gameState}
-              activePetKind={activePetKind}
-            />
-          )}
-          {gameState && Object.keys(gameState.petXpHistory).length > 0 && (
-            <Leaderboard gameState={gameState} />
-          )}
-          <PetDiary gameState={gameState} />
-          <WidgetPanel />
-          <VolumeControl />
+      {/* ═══════════ ANIMATED COUNTER ═══════════ */}
+      <section className="relative z-10 py-8 px-4">
+        <div className="max-w-3xl mx-auto">
+          <AnimatedCounter />
         </div>
+      </section>
 
-        {/* Pet Spotlight */}
-        <section className="hidden md:flex flex-col gap-6 max-w-2xl mx-auto justify-center min-h-[80vh] pointer-events-none">
-          <PetSpotlight activePetKind={activePetKind ?? "cat"} gameState={gameState} />
-
-          {/* Animated stats counter */}
-          <div className="mt-8 pointer-events-auto">
-            <AnimatedCounter />
+      {/* ═══════════ INTERACTIVE DEMO ═══════════ */}
+      <section className="relative z-10 py-8 px-4" id="demo">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-6">
+            <h2 className="font-display text-lg text-neon">🎮 DEMO INTERACTIVA</h2>
+            <p className="text-xs text-muted-foreground mt-1">Prueba con 5 mascotas y 2 juegos gratis</p>
           </div>
-        </section>
-      </div>
+          <DemoSection gameState={gameState} />
+        </div>
+      </section>
+
+      {/* ═══════════ FEATURES SHOWCASE ═══════════ */}
+      <section className="relative z-10 py-12 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="font-display text-lg text-neon">✨ TODO LO QUE INCLUYE</h2>
+            <p className="text-xs text-muted-foreground mt-1">La app de escritorio desbloquea todo esto</p>
+          </div>
+          <FeaturesGrid />
+        </div>
+      </section>
+
+      {/* ═══════════ PET GALLERY ═══════════ */}
+      <section className="relative z-10 py-12 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-6">
+            <h2 className="font-display text-lg text-neon">🐾 62 MASCOTAS</h2>
+            <p className="text-xs text-muted-foreground mt-1">Desde clásicas hasta Lovecraft y videojuegos</p>
+          </div>
+          <PetGalleryPreview />
+        </div>
+      </section>
+
+      {/* ═══════════ FINAL CTA ═══════════ */}
+      <section className="relative z-10 py-16 px-4">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="glass rounded-2xl p-8 border border-neon/30">
+            <span className="text-4xl block mb-4 animate-bob">🐾</span>
+            <h2 className="font-display text-xl text-neon mb-2">DESCARGA GRATIS</h2>
+            <p className="text-xs text-muted-foreground mb-6">Beta gratuita — Windows, macOS, Linux</p>
+            <Link
+              to="/buy"
+              className="inline-block px-8 py-3 rounded-lg bg-neon/20 text-neon border border-neon/50 font-display text-sm hover:bg-neon/30 hover:shadow-[0_0_20px_var(--neon)] transition-all"
+            >
+              ⬇️ DESCARGAR AHORA
+            </Link>
+            <p className="text-[8px] text-muted-foreground mt-4">v2.3.0 · ~85 MB · No requiere cuenta</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 py-6 px-4 border-t border-border/30">
+        <p className="text-center text-[9px] text-muted-foreground font-display">
+          PIXELPETS © 2026 · Hecho con 💜 · <Link to="/buy" className="text-neon hover:underline">Descargar</Link>
+        </p>
+      </footer>
     </main>
   );
 }
 
-const PERSONALITY_TRAITS: Record<string, string> = {
-  cat: "Sleepy & Judgy",
-  dog: "Loyal & Playful",
-  slime: "Chill & Bouncy",
-  dragon: "Fierce & Hungry",
-  ghost: "Shy & Mysterious",
-  robot: "Logical & Efficient",
-  axolotl: "Cute & Regenerative",
-  capybara: "Ultra Chill",
-  penguin: "Dapper & Cool",
-  fox: "Clever & Quick",
-  panda: "Lazy & Cuddly",
-  unicorn: "Magical & Unique",
-  bunny: "Fluffy & Hoppy",
-  monkey: "Mischievous",
-  cthulhu: "Chaotic & Cosmic",
-  pikachu: "Electric & Energetic",
-  kirby: "Hungry & Powerful",
-  creeper: "Explosive",
-  yoshi: "Friendly & Helpful",
-  sonic: "Fast & Impatient",
-  doge: "Much Wow",
-};
-
-function PetSpotlight({ activePetKind, gameState }: { activePetKind: PetKind; gameState: ReturnType<typeof useGameState> }) {
+// ═══════════ HERO SECTION ═══════════
+function HeroSection({ onTryDemo }: { onTryDemo: () => void }) {
   const [step, setStep] = useState(0);
-  const [thought, setThought] = useState(() => randomThought(activePetKind));
+  const [petIdx, setPetIdx] = useState(0);
+  const showcasePets: PetKind[] = ["cat", "dragon", "pikachu", "axolotl", "ghost"];
 
   useEffect(() => {
     const id = setInterval(() => setStep((s) => s + 1), 300);
@@ -482,58 +120,224 @@ function PetSpotlight({ activePetKind, gameState }: { activePetKind: PetKind; ga
   }, []);
 
   useEffect(() => {
-    setThought(randomThought(activePetKind));
-    const id = setInterval(() => setThought(randomThought(activePetKind)), 8000);
+    const id = setInterval(() => setPetIdx((i) => (i + 1) % showcasePets.length), 3000);
     return () => clearInterval(id);
-  }, [activePetKind]);
+  }, []);
 
-  const def = PETS[activePetKind];
-  const petName = gameState.petNames[activePetKind] || def.name;
-  const trait = PERSONALITY_TRAITS[activePetKind] || "Unique & Special";
-  const petLevel = gameState.petXpHistory[activePetKind]
-    ? Math.floor((gameState.petXpHistory[activePetKind] ?? 0) / 100) + 1
-    : 1;
+  const currentPet = showcasePets[petIdx];
+  const def = PETS[currentPet];
 
   return (
-    <div className="glass rounded-2xl p-8 border border-border/60 relative overflow-hidden">
-      {/* Glow background */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
-        background: "radial-gradient(ellipse at center, var(--primary) 0%, transparent 70%)"
+    <section className="relative z-10 min-h-[70vh] flex flex-col items-center justify-center px-4 py-16">
+      {/* Background glow */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "radial-gradient(ellipse at 50% 40%, color-mix(in oklab, var(--primary) 15%, transparent) 0%, transparent 60%)"
       }} />
 
-      <div className="relative flex flex-col items-center gap-4">
-        {/* Large pet render */}
-        <div className="w-32 h-32 animate-bob">
+      <div className="relative flex flex-col items-center gap-6 text-center">
+        {/* Logo */}
+        <h1 className="font-display text-3xl md:text-5xl">
+          <span className="text-neon">PIXEL</span><span className="text-neon-pink">PETS</span>
+        </h1>
+        <p className="text-sm md:text-base text-muted-foreground max-w-md">
+          Tu mascota virtual de escritorio. Aliméntala, juega con ella, explora mundos y comparte con amigos.
+        </p>
+
+        {/* Animated pet showcase */}
+        <div className="w-24 h-24 md:w-32 md:h-32 animate-bob my-4">
           {def.render("right", step)}
         </div>
+        <p className="font-display text-[10px] text-neon-pink animate-pulse">{def.name}</p>
 
-        {/* Pet name & trait */}
-        <div className="text-center">
-          <h3 className="font-display text-xl text-neon">{petName}</h3>
-          <p className="font-display text-[10px] text-neon-pink mt-1">{trait}</p>
+        {/* CTAs */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          <Link
+            to="/buy"
+            className="px-6 py-3 rounded-lg bg-neon/20 text-neon border border-neon/50 font-display text-xs hover:bg-neon/30 hover:shadow-[0_0_20px_var(--neon)] transition-all"
+          >
+            ⬇️ DESCARGAR GRATIS
+          </Link>
+          <a
+            href="#demo"
+            className="px-6 py-3 rounded-lg bg-secondary/40 text-foreground border border-border font-display text-xs hover:border-primary/50 transition-all"
+          >
+            🎮 PROBAR DEMO
+          </a>
         </div>
 
-        {/* Thought bubble */}
-        <div className="glass rounded-lg px-4 py-2 border border-primary/30 min-h-[36px] flex items-center">
-          <p className="text-xs text-muted-foreground italic text-center">💭 "{thought}"</p>
-        </div>
+        <p className="text-[9px] text-muted-foreground mt-2">Windows · macOS · Linux · Beta gratuita</p>
+      </div>
+    </section>
+  );
+}
 
-        {/* Stats row */}
-        <div className="flex gap-4 mt-2">
-          <div className="text-center">
-            <p className="font-display text-lg text-neon tabular-nums">L{petLevel}</p>
-            <p className="font-display text-[7px] text-muted-foreground">LEVEL</p>
-          </div>
-          <div className="text-center">
-            <p className="font-display text-lg text-neon tabular-nums">{gameState.level}</p>
-            <p className="font-display text-[7px] text-muted-foreground">TRAINER</p>
-          </div>
-          <div className="text-center">
-            <p className="font-display text-lg text-neon tabular-nums">{gameState.achievements.length}</p>
-            <p className="font-display text-[7px] text-muted-foreground">BADGES</p>
-          </div>
+// ═══════════ DEMO SECTION ═══════════
+function DemoSection({ gameState }: { gameState: ReturnType<typeof useGameState> }) {
+  const [currentPet, setCurrentPet] = useState<PetKind>("cat");
+  const [activeGame, setActiveGame] = useState<"catch" | "memory" | null>(null);
+  const [achievementToast, setAchievementToast] = useState<{ name: string; icon: string } | null>(null);
+  const cursorRef = useRef<{ x: number; y: number } | null>(null);
+  const actionRef = useRef<{ feed: () => void; play: () => void; sleep: () => void } | null>(null);
+  const awareness = useSystemAwareness();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { cursorRef.current = { x: e.clientX, y: e.clientY }; };
+    window.addEventListener("mousemove", handler);
+    return () => window.removeEventListener("mousemove", handler);
+  }, []);
+
+  const handleGameComplete = (score: number) => {
+    gameState.addXp(Math.min(30, score * 2));
+    setActiveGame(null);
+  };
+
+  return (
+    <div className="glass rounded-2xl border border-border/60 overflow-hidden">
+      {/* Demo pet area */}
+      <div className="relative h-64 md:h-80 bg-background/30">
+        <ClientOnly fallback={null}>
+          <Pet
+            id="demo"
+            kind={currentPet}
+            cursorRef={cursorRef}
+            followCursor={false}
+            onRemove={() => {}}
+            awareness={awareness}
+            actionRef={actionRef}
+            gameState={gameState}
+          />
+        </ClientOnly>
+
+        {/* Demo badge */}
+        <div className="absolute top-3 left-3 px-2 py-1 rounded bg-yellow-500/20 border border-yellow-500/40">
+          <span className="font-display text-[8px] text-yellow-400">⚡ DEMO MODE</span>
         </div>
       </div>
+
+      {/* Controls bar */}
+      <div className="p-4 border-t border-border/40">
+        {/* Pet selector */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="font-display text-[8px] text-muted-foreground">MASCOTA:</span>
+          <div className="flex gap-1.5">
+            {FREE_PETS.map((k) => (
+              <button
+                key={k}
+                onClick={() => setCurrentPet(k)}
+                className={`w-9 h-9 rounded-lg border transition-all flex items-center justify-center ${
+                  currentPet === k
+                    ? "border-neon bg-neon/10 shadow-[0_0_8px_var(--neon)]"
+                    : "border-border/40 hover:border-neon/50"
+                }`}
+                title={PETS[k].name}
+              >
+                <div className="w-7 h-7">{PETS[k].render("right", 0)}</div>
+              </button>
+            ))}
+            {/* Locked indicator */}
+            <div className="w-9 h-9 rounded-lg border border-border/20 flex items-center justify-center opacity-40" title="57 más en la app">
+              <span className="text-[10px]">+57🔒</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 mb-3">
+          <button onClick={() => actionRef.current?.feed()} className="flex-1 py-2 rounded-lg border border-border/40 hover:border-neon/50 font-display text-[9px] transition-all">🍖 Feed</button>
+          <button onClick={() => actionRef.current?.play()} className="flex-1 py-2 rounded-lg border border-border/40 hover:border-neon/50 font-display text-[9px] transition-all">🎾 Play</button>
+          <button onClick={() => actionRef.current?.sleep()} className="flex-1 py-2 rounded-lg border border-border/40 hover:border-neon/50 font-display text-[9px] transition-all">😴 Sleep</button>
+        </div>
+
+        {/* Games */}
+        <div className="flex gap-2">
+          <button onClick={() => setActiveGame("catch")} className="flex-1 py-2 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 font-display text-[9px] transition-all">🎯 Catch Game</button>
+          <button onClick={() => setActiveGame("memory")} className="flex-1 py-2 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 font-display text-[9px] transition-all">🧠 Memory Game</button>
+          <div className="flex-1 py-2 rounded-lg border border-border/20 font-display text-[9px] text-center opacity-40">+11 🔒</div>
+        </div>
+      </div>
+
+      {/* Game overlays */}
+      {activeGame === "catch" && <CatchGame onComplete={handleGameComplete} onCancel={() => setActiveGame(null)} />}
+      {activeGame === "memory" && <MemoryGame onComplete={(a) => { gameState.addXp(20); setActiveGame(null); }} onCancel={() => setActiveGame(null)} />}
+
+      {achievementToast && <AchievementToast name={achievementToast.name} icon={achievementToast.icon} />}
+    </div>
+  );
+}
+
+// ═══════════ FEATURES GRID ═══════════
+function FeaturesGrid() {
+  const features = [
+    { icon: "🍽️", title: "15 Comidas", desc: "Alimenta con pizza, sushi, steak... cada mascota tiene favoritos" },
+    { icon: "📋", title: "Misiones Diarias", desc: "3 misiones nuevas cada día con recompensas" },
+    { icon: "🗺️", title: "5 Mundos", desc: "Explora desde Pixel Meadow hasta The Abyss" },
+    { icon: "🌤️", title: "Clima Real", desc: "Tu mascota reacciona al clima de tu ciudad" },
+    { icon: "🔄", title: "Trading", desc: "Comparte mascotas con amigos via código" },
+    { icon: "💬", title: "Interacciones", desc: "Las mascotas juegan y pelean entre ellas" },
+    { icon: "🎮", title: "13 Mini-juegos", desc: "Catch, Memory, Snake, Flappy, Rhythm..." },
+    { icon: "🎵", title: "14 Sonidos", desc: "Rain, Lofi, Café, Dungeon, Void..." },
+    { icon: "⚡", title: "Sistema XP", desc: "Niveles, evoluciones y logros" },
+    { icon: "🔋", title: "System Aware", desc: "Reacciona a tu batería y música" },
+    { icon: "🍅", title: "Pomodoro", desc: "Timer integrado con reacciones de tu pet" },
+    { icon: "📖", title: "Diario", desc: "Tu mascota escribe su propia historia" },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      {features.map((f) => (
+        <div key={f.title} className="glass rounded-xl p-3 border border-border/40 hover:border-neon/30 transition-all group">
+          <span className="text-xl block mb-2 group-hover:animate-bob">{f.icon}</span>
+          <p className="font-display text-[9px] text-foreground">{f.title}</p>
+          <p className="text-[8px] text-muted-foreground mt-0.5">{f.desc}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════ PET GALLERY PREVIEW ═══════════
+function PetGalleryPreview() {
+  const [hoveredPet, setHoveredPet] = useState<PetKind | null>(null);
+  const categories = [
+    { label: "Clásicas", pets: ["cat", "dog", "bunny", "fox", "panda", "axolotl", "capybara", "penguin", "monkey", "unicorn"] as PetKind[] },
+    { label: "Fantasy", pets: ["dragon", "ghost", "robot", "alien", "slime", "slimemage", "mushroom"] as PetKind[] },
+    { label: "Lovecraft", pets: ["cthulhu", "shoggoth", "blackgoat", "necronomicon", "yurei"] as PetKind[] },
+    { label: "Videojuegos", pets: ["pikachu", "kirby", "creeper", "yoshi", "metroid", "companionCube", "chocobo"] as PetKind[] },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {categories.map((cat) => (
+        <div key={cat.label}>
+          <p className="font-display text-[9px] text-neon-pink mb-2">{cat.label.toUpperCase()}</p>
+          <div className="flex gap-2 flex-wrap">
+            {cat.pets.map((k) => {
+              const def = PETS[k];
+              if (!def) return null;
+              const isFree = FREE_PETS.includes(k);
+              return (
+                <div
+                  key={k}
+                  onMouseEnter={() => setHoveredPet(k)}
+                  onMouseLeave={() => setHoveredPet(null)}
+                  className={`relative w-12 h-12 rounded-lg border flex items-center justify-center transition-all ${
+                    isFree
+                      ? "border-neon/40 bg-neon/5"
+                      : "border-border/30 bg-secondary/20 opacity-60 grayscale hover:opacity-100 hover:grayscale-0"
+                  }`}
+                  title={`${def.name}${isFree ? " (Free)" : " 🔒"}`}
+                >
+                  <div className="w-9 h-9">{def.render("right", 0)}</div>
+                  {!isFree && <span className="absolute top-0 right-0 text-[7px]">🔒</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <p className="text-center text-[9px] text-muted-foreground mt-4">
+        + más categorías: Sci-fi, Horror, Animales... <span className="text-neon">62 en total</span>
+      </p>
     </div>
   );
 }
