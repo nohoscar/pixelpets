@@ -14,6 +14,8 @@ export function AdventureMode({ gameState, onStartBossFight }: Props) {
 
   const availableWorlds = getAvailableWorlds(gameState.level);
   const currentAdventure = gameState.currentAdventure || null;
+  // Stable key for effect dependency
+  const adventureKey = currentAdventure ? `${currentAdventure.worldId}-${currentAdventure.stageId}-${currentAdventure.startedAt}` : "";
 
   // Handle exploration timer
   useEffect(() => {
@@ -22,7 +24,7 @@ export function AdventureMode({ gameState, onStartBossFight }: Props) {
 
     const world = WORLDS.find((w) => w.id === currentAdventure.worldId);
     const stage = world?.stages.find((s) => s.id === currentAdventure.stageId);
-    if (!world || !stage) return;
+    if (!world || !stage) { setExploring(false); return; }
 
     const duration = stage.durationMs;
     const startedAt = currentAdventure.startedAt;
@@ -46,7 +48,7 @@ export function AdventureMode({ gameState, onStartBossFight }: Props) {
     const id = setInterval(tick, 500);
     tick();
     return () => clearInterval(id);
-  }, [currentAdventure]);
+  }, [adventureKey]);
 
   if (exploring && currentAdventure) {
     const world = WORLDS.find((w) => w.id === currentAdventure.worldId);

@@ -70,12 +70,16 @@ function PetOverlay() {
     if (params.get("follow") === "1") setFollowCursor(true);
   }, []);
 
-  // Track mouse position (overlay is always click-through, no hit-testing needed)
+  // Track mouse position — throttled to reduce overhead
   useEffect(() => {
+    let last = 0;
     const handler = (e: MouseEvent) => {
+      const now = Date.now();
+      if (now - last < 50) return; // max 20fps for cursor tracking
+      last = now;
       cursorRef.current = { x: e.clientX, y: e.clientY };
     };
-    window.addEventListener("mousemove", handler);
+    window.addEventListener("mousemove", handler, { passive: true });
     return () => window.removeEventListener("mousemove", handler);
   }, []);
 

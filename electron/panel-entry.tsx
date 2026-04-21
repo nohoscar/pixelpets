@@ -287,35 +287,35 @@ function TabPet({ currentKind, setPet, gameState, stats, currentPetName, awarene
   const petLevel = Math.floor((gameState.petXpHistory[currentKind] ?? 0) / 100) + 1;
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Pet spotlight card */}
-      <div className="glass rounded-2xl p-6 border border-border/60 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-15 pointer-events-none" style={{
+    <div className="flex flex-col gap-3">
+      {/* Pet spotlight — compact horizontal */}
+      <div className="glass rounded-xl p-3 border border-border/60 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
           background: "radial-gradient(ellipse at center, var(--primary) 0%, transparent 70%)"
         }} />
-        <div className="relative flex items-center gap-5">
-          <div className="w-20 h-20 animate-bob flex-shrink-0">
+        <div className="relative flex items-center gap-3">
+          <div className="w-14 h-14 animate-bob flex-shrink-0">
             {def.render("right", step)}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-display text-lg text-neon truncate">{currentPetName}</h2>
-            <p className="text-[9px] text-muted-foreground italic mt-0.5">💭 "{thought}"</p>
-            <div className="flex gap-3 mt-2">
-              <span className="font-display text-[9px] text-neon">L{petLevel}</span>
-              <span className="font-display text-[9px] text-muted-foreground">{gameState.petXpHistory[currentKind] ?? 0} XP</span>
+            <h2 className="font-display text-sm text-neon truncate">{currentPetName}</h2>
+            <p className="text-[8px] text-muted-foreground italic truncate">💭 {thought}</p>
+            <div className="flex gap-2 mt-1">
+              <span className="font-display text-[8px] text-neon">L{petLevel}</span>
+              <span className="font-display text-[8px] text-muted-foreground">{gameState.petXpHistory[currentKind] ?? 0}XP</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-3 gap-2">
-        <button onClick={onFeed} className="py-3 rounded-xl border border-border/40 hover:border-neon/50 font-display text-[10px] transition-all glass">🍖 Feed</button>
-        <button onClick={onPlay} className="py-3 rounded-xl border border-border/40 hover:border-neon/50 font-display text-[10px] transition-all glass">🎾 Play</button>
-        <button onClick={onSleep} className="py-3 rounded-xl border border-border/40 hover:border-neon/50 font-display text-[10px] transition-all glass">😴 Sleep</button>
+      {/* Quick actions — compact */}
+      <div className="grid grid-cols-3 gap-1.5">
+        <button onClick={onFeed} className="py-2 rounded-lg border border-border/40 hover:border-neon/50 font-display text-[9px] transition-all glass">🍖 Feed</button>
+        <button onClick={onPlay} className="py-2 rounded-lg border border-border/40 hover:border-neon/50 font-display text-[9px] transition-all glass">🎾 Play</button>
+        <button onClick={onSleep} className="py-2 rounded-lg border border-border/40 hover:border-neon/50 font-display text-[9px] transition-all glass">😴 Sleep</button>
       </div>
 
-      {/* Stats */}
+      {/* Stats — compact inline */}
       <StatsPanel
         stats={stats}
         petName={currentPetName}
@@ -327,36 +327,36 @@ function TabPet({ currentKind, setPet, gameState, stats, currentPetName, awarene
         activePetKind={currentKind}
       />
 
-      {/* Food inventory */}
-      <FoodInventory gameState={gameState} activePetKind={currentKind} onFeedWithFood={onFeedWithFood} />
+      {/* Food + Missions side by side on wide screens */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <FoodInventory gameState={gameState} activePetKind={currentKind} onFeedWithFood={onFeedWithFood} />
+        <DailyMissions gameState={gameState} />
+      </div>
 
-      {/* Daily missions */}
-      <DailyMissions gameState={gameState} />
-
-      {/* Pet selector */}
-      <div className="glass rounded-xl p-3 border border-border/40">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-display text-[9px] text-muted-foreground">SWITCH PET</h4>
-          <label className="flex items-center gap-1.5 cursor-pointer">
+      {/* Pet selector — compact */}
+      <div className="glass rounded-xl p-2 border border-border/40">
+        <div className="flex items-center justify-between mb-1.5">
+          <h4 className="font-display text-[8px] text-muted-foreground">SWITCH PET</h4>
+          <label className="flex items-center gap-1 cursor-pointer">
             <input type="checkbox" checked={followCursor} onChange={(e) => setFollowCursor(e.target.checked)} className="w-3 h-3 accent-[var(--neon)]" />
-            <span className="text-[8px] text-muted-foreground">Follow cursor</span>
+            <span className="text-[7px] text-muted-foreground">Follow</span>
           </label>
         </div>
-        <div className="grid grid-cols-8 gap-1.5 max-h-40 overflow-y-auto">
+        <div className="grid grid-cols-10 gap-1 max-h-28 overflow-y-auto">
           {PET_LIST.map((k) => {
             const d = PETS[k];
             return (
               <button
                 key={k}
                 onClick={() => setPet(k)}
-                className={`aspect-square rounded-lg border transition-all flex items-center justify-center ${
+                className={`aspect-square rounded border transition-all flex items-center justify-center ${
                   currentKind === k
-                    ? "border-neon bg-neon/10 shadow-[0_0_8px_var(--neon)]"
-                    : "border-border/30 hover:border-neon/40"
+                    ? "border-neon bg-neon/10"
+                    : "border-border/20 hover:border-neon/40"
                 }`}
                 title={d.name}
               >
-                <div className="w-7 h-7">{d.render("right", 0)}</div>
+                <div className="w-5 h-5">{d.render("right", 0)}</div>
               </button>
             );
           })}
@@ -369,40 +369,36 @@ function TabPet({ currentKind, setPet, gameState, stats, currentPetName, awarene
 // ═══════════ TAB: GAMES ═══════════
 function TabGames({ onStartGame, gameState }: { onStartGame: (g: string) => void; gameState: ReturnType<typeof useGameState> }) {
   const games = [
-    { id: "catch", icon: "🎯", label: "Catch", desc: "Catch falling items" },
-    { id: "memory", icon: "🧠", label: "Memory", desc: "Match pairs" },
-    { id: "simon", icon: "🎵", label: "Simon", desc: "Repeat the pattern" },
-    { id: "typing", icon: "⌨️", label: "Typing", desc: "Type fast!" },
-    { id: "reaction", icon: "⚡", label: "Reaction", desc: "Click when green" },
-    { id: "quiz", icon: "❓", label: "Quiz", desc: "Pet trivia" },
-    { id: "dodge", icon: "🏃", label: "Dodge", desc: "Avoid obstacles" },
-    { id: "whack", icon: "🔨", label: "Whack", desc: "Hit the moles" },
-    { id: "snake", icon: "🐍", label: "Snake", desc: "Classic snake" },
-    { id: "flappy", icon: "🐦", label: "Flappy", desc: "Fly through pipes" },
-    { id: "puzzle", icon: "🧩", label: "Puzzle", desc: "Slide tiles" },
-    { id: "colorMatch", icon: "🎨", label: "Color", desc: "Match colors" },
-    { id: "rhythm", icon: "🎶", label: "Rhythm", desc: "Hit the beat" },
+    { id: "catch", icon: "🎯", label: "Catch" },
+    { id: "memory", icon: "🧠", label: "Memory" },
+    { id: "simon", icon: "🎵", label: "Simon" },
+    { id: "typing", icon: "⌨️", label: "Typing" },
+    { id: "reaction", icon: "⚡", label: "React" },
+    { id: "quiz", icon: "❓", label: "Quiz" },
+    { id: "dodge", icon: "🏃", label: "Dodge" },
+    { id: "whack", icon: "🔨", label: "Whack" },
+    { id: "snake", icon: "🐍", label: "Snake" },
+    { id: "flappy", icon: "🐦", label: "Flappy" },
+    { id: "puzzle", icon: "🧩", label: "Puzzle" },
+    { id: "colorMatch", icon: "🎨", label: "Color" },
+    { id: "rhythm", icon: "🎶", label: "Rhythm" },
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="text-center">
-        <h2 className="font-display text-sm text-neon">🎮 MINI-GAMES</h2>
-        <p className="text-[9px] text-muted-foreground mt-1">Win games to earn food & XP</p>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
+    <div className="flex flex-col gap-3">
+      <p className="font-display text-[9px] text-muted-foreground text-center">Win games to earn food & XP</p>
+      <div className="grid grid-cols-4 gap-1.5">
         {games.map((g) => {
           const played = (gameState.gamesPlayed as any)[g.id] || 0;
           return (
             <button
               key={g.id}
               onClick={() => onStartGame(g.id)}
-              className="glass rounded-xl p-3 border border-border/40 hover:border-neon/50 transition-all text-center group"
+              className="glass rounded-lg p-2 border border-border/40 hover:border-neon/50 transition-all text-center group"
             >
-              <span className="text-xl block group-hover:animate-bob">{g.icon}</span>
-              <p className="font-display text-[9px] mt-1">{g.label}</p>
-              <p className="text-[7px] text-muted-foreground">{g.desc}</p>
-              {played > 0 && <p className="text-[7px] text-neon mt-0.5">×{played}</p>}
+              <span className="text-lg block group-hover:animate-bob">{g.icon}</span>
+              <p className="font-display text-[8px] mt-0.5">{g.label}</p>
+              {played > 0 && <p className="text-[7px] text-neon">×{played}</p>}
             </button>
           );
         })}

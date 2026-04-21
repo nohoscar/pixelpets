@@ -379,9 +379,9 @@ app.whenReady().then(() => {
       }
     );
   };
-  // Check every 30 seconds — non-blocking async
-  setInterval(checkMusic, 30000);
-  setTimeout(checkMusic, 30000);
+  // Check every 60 seconds — non-blocking async
+  setInterval(checkMusic, 60000);
+  setTimeout(checkMusic, 60000);
 
   // --- Notification Reminders ---
   let lastInteractionTime = Date.now();
