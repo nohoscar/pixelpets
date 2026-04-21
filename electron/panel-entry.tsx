@@ -1,12 +1,10 @@
 // Standalone entry point for the Electron panel window.
-// Full-featured control panel — mirrors the web demo but adapted for Electron IPC.
-// The pet itself is NOT rendered here (it lives in the overlay window).
+// Tabbed interface for compact navigation.
 
 import "../src/styles.css";
 import { createRoot } from "react-dom/client";
 import { useEffect, useState } from "react";
-import { ControlPanel } from "../src/components/ControlPanel";
-import { PETS, type PetKind } from "../src/components/pets/petSprites";
+import { PETS, PET_LIST, type PetKind } from "../src/components/pets/petSprites";
 import { StatsPanel } from "../src/components/StatsPanel";
 import { VolumeControl } from "../src/components/VolumeControl";
 import { useSystemAwareness } from "../src/hooks/useSystemAwareness";
@@ -25,21 +23,21 @@ import { PuzzleGame } from "../src/components/games/PuzzleGame";
 import { ColorMatchGame } from "../src/components/games/ColorMatchGame";
 import { RhythmGame } from "../src/components/games/RhythmGame";
 import { AchievementToast } from "../src/components/AchievementToast";
-import { WidgetPanel } from "../src/components/WidgetPanel";
 import { I18nProvider } from "../src/lib/i18n";
 import { Onboarding, useOnboarding } from "../src/components/Onboarding";
 import { applyTheme, type ThemeId } from "../src/lib/themes";
 import { AmbientSound } from "../src/components/AmbientSound";
-import { Leaderboard } from "../src/components/Leaderboard";
 import { FoodInventory } from "../src/components/FoodInventory";
 import { DailyMissions } from "../src/components/DailyMissions";
 import { AdventureMode } from "../src/components/AdventureMode";
 import { WeatherWidget } from "../src/components/WeatherWidget";
 import { PetTrading } from "../src/components/PetTrading";
-import { PetInteractionDisplay } from "../src/components/PetInteractionDisplay";
 import { getGameReward, isFavoriteFood } from "../src/lib/foodSystem";
 import type { FoodItem } from "../src/lib/foodSystem";
-import { AnimatedCounter } from "../src/components/AnimatedCounter";
+import { PomodoroTimer } from "../src/components/PomodoroTimer";
+import { getUnlockedAccessories } from "../src/components/pets/accessories";
+import { ACHIEVEMENTS } from "../src/hooks/useGameState";
+import { THEMES } from "../src/lib/themes";
 import { randomThought } from "../src/components/pets/petThoughts";
 import type { PetStats } from "../src/components/pets/Pet";
 
@@ -55,11 +53,12 @@ declare global {
   }
 }
 
+type TabId = "pet" | "games" | "adventure" | "social" | "settings";
+
 function ElectronApp() {
   const gameState = useGameState();
   const { showOnboarding, dismissOnboarding } = useOnboarding();
 
-  // Apply persisted theme on mount
   useEffect(() => {
     if (gameState.theme && gameState.theme !== "cyberpunk") {
       applyTheme(gameState.theme as ThemeId);
@@ -79,182 +78,53 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
   const [currentKind, setCurrentKind] = useState<PetKind>("cat");
   const [followCursor, setFollowCursor] = useState(false);
   const [stats, setStats] = useState<PetStats | null>(null);
-  const [activeGame, setActiveGame] = useState<"catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | "whack" | "snake" | "flappy" | "puzzle" | "colorMatch" | "rhythm" | null>(null);
+  const [activeGame, setActiveGame] = useState<string | null>(null);
   const [achievementToast, setAchievementToast] = useState<{ name: string; icon: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("pet");
   const awareness = useSystemAwareness();
 
-  // Listen for stats updates from the pet overlay via IPC
   useEffect(() => {
     window.pixelpets?.onStatsUpdate?.((s) => setStats(s));
   }, []);
 
-  // Mini-game handlers
-  const handleCatchComplete = (score: number) => {
-    const xp = Math.min(50, Math.max(10, score * 3));
+  // --- Game handlers (consolidated) ---
+  const handleGameComplete = (game: string, score: number) => {
+    const xpMap: Record<string, (s: number) => number> = {
+      catch: (s) => Math.min(50, Math.max(10, s * 3)),
+      memory: (s) => s < 10 ? 50 : s <= 15 ? 30 : 15,
+      simon: (s) => Math.min(50, s * 5),
+      typing: (s) => Math.min(50, s * 8),
+      reaction: (s) => s < 300 ? 50 : s < 500 ? 30 : 15,
+      quiz: (s) => Math.min(50, s * 5),
+      dodge: (s) => Math.min(50, s * 2),
+      whack: (s) => Math.min(50, s * 3),
+      snake: (s) => Math.min(50, s * 2),
+      flappy: (s) => Math.min(50, s * 3),
+      puzzle: (s) => Math.min(50, s * 4),
+      colorMatch: (s) => Math.min(50, s * 3),
+      rhythm: (s) => Math.min(50, s * 3),
+    };
+    const xp = (xpMap[game] || (() => 20))(score);
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("catch");
+    gameState.incrementGamesPlayed(game as any);
     gameState.updateMissionProgress("game", 1);
     gameState.updateMissionProgress("xp", xp);
     getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
-  const handleMemoryComplete = (attempts: number) => {
-    const xp = attempts < 10 ? 50 : attempts <= 15 ? 30 : 15;
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("memory");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(30 - attempts).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
+  const handleGameCancel = () => setActiveGame(null);
 
-  const handleSimonComplete = (rounds: number) => {
-    const xp = Math.min(50, rounds * 5);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("simon");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(rounds * 2).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleTypingComplete = (score: number) => {
-    const xp = Math.min(50, score * 8);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("typing");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(score * 3).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleReactionComplete = (avgMs: number) => {
-    const xp = avgMs < 300 ? 50 : avgMs < 500 ? 30 : 15;
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("reaction");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(avgMs < 300 ? 30 : 15).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleQuizComplete = (correct: number) => {
-    const xp = Math.min(50, correct * 5);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("quiz");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(correct * 3).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleDodgeComplete = (score: number) => {
-    const xp = Math.min(50, score * 2);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("dodge");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleWhackComplete = (score: number) => {
-    const xp = Math.min(50, score * 3);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("whack");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleSnakeComplete = (score: number) => {
-    const xp = Math.min(50, score * 2);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("snake");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleFlappyComplete = (score: number) => {
-    const xp = Math.min(50, score * 3);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("flappy");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handlePuzzleComplete = (score: number) => {
-    const xp = Math.min(50, score * 4);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("puzzle");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(score * 2).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleColorMatchComplete = (score: number) => {
-    const xp = Math.min(50, score * 3);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("colorMatch");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleRhythmComplete = (score: number) => {
-    const xp = Math.min(50, score * 3);
-    gameState.addXp(xp);
-    gameState.addPetXp(currentKind, xp);
-    gameState.incrementGamesPlayed("rhythm");
-    gameState.updateMissionProgress("game", 1);
-    gameState.updateMissionProgress("xp", xp);
-    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
-    setActiveGame(null);
-  };
-
-  const handleGameCancel = () => {
-    setActiveGame(null);
-  };
-
-  // Achievement toast handler
   const showAchievementToast = (name: string, icon: string) => {
     setAchievementToast({ name, icon });
     setTimeout(() => setAchievementToast(null), 3000);
   };
 
-  // Wire achievement callback to toast
   useEffect(() => {
     gameState.achievementCallbackRef.current = showAchievementToast;
     return () => { gameState.achievementCallbackRef.current = null; };
   });
-
-  // Pomodoro callbacks — send speech to pet overlay via IPC
-  const handlePomodoroWorkEnd = () => {
-    window.pixelpets?.petAction("pomodoroWorkEnd");
-  };
-  const handlePomodoroBreakEnd = () => {
-    window.pixelpets?.petAction("pomodoroBreakEnd");
-  };
 
   // IPC wrappers
   const setPet = (kind: PetKind) => {
@@ -278,162 +148,129 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.updateMissionProgress("play", 1);
   };
 
+  const handleSleep = () => { window.pixelpets?.petAction("sleep"); };
+
   const handleFeedWithFood = (food: FoodItem) => {
     if (!gameState.useFood(food.id)) return;
     window.pixelpets?.petAction("feed");
     gameState.incrementFeedCount();
     const isFav = isFavoriteFood(currentKind, food.id);
-    const multiplier = isFav ? 2 : 1;
-    const xp = (food.happinessBoost * multiplier);
+    const xp = food.happinessBoost * (isFav ? 2 : 1);
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.updateMissionProgress("feed", 1);
     gameState.updateMissionProgress("food", 1);
   };
 
-  const handleSleep = () => {
-    window.pixelpets?.petAction("sleep");
-  };
-
   const currentPetName = gameState.petNames[currentKind] || PETS[currentKind].name;
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden">
-      {/* Mini-game overlays */}
-      {activeGame === "catch" && (
-        <CatchGame onComplete={handleCatchComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "memory" && (
-        <MemoryGame onComplete={handleMemoryComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "simon" && (
-        <SimonGame onComplete={handleSimonComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "typing" && (
-        <TypingGame onComplete={handleTypingComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "reaction" && (
-        <ReactionGame onComplete={handleReactionComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "quiz" && (
-        <PetQuizGame onComplete={handleQuizComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "dodge" && (
-        <DodgeGame onComplete={handleDodgeComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "whack" && (
-        <WhackGame onComplete={handleWhackComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "snake" && (
-        <SnakeGame onComplete={handleSnakeComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "flappy" && (
-        <FlappyGame onComplete={handleFlappyComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "puzzle" && (
-        <PuzzleGame onComplete={handlePuzzleComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "colorMatch" && (
-        <ColorMatchGame onComplete={handleColorMatchComplete} onCancel={handleGameCancel} />
-      )}
-      {activeGame === "rhythm" && (
-        <RhythmGame onComplete={handleRhythmComplete} onCancel={handleGameCancel} />
-      )}
+    <main className="relative min-h-screen w-full overflow-hidden flex flex-col">
+      {/* Game overlays */}
+      {activeGame === "catch" && <CatchGame onComplete={(s) => handleGameComplete("catch", s)} onCancel={handleGameCancel} />}
+      {activeGame === "memory" && <MemoryGame onComplete={(s) => handleGameComplete("memory", s)} onCancel={handleGameCancel} />}
+      {activeGame === "simon" && <SimonGame onComplete={(s) => handleGameComplete("simon", s)} onCancel={handleGameCancel} />}
+      {activeGame === "typing" && <TypingGame onComplete={(s) => handleGameComplete("typing", s)} onCancel={handleGameCancel} />}
+      {activeGame === "reaction" && <ReactionGame onComplete={(s) => handleGameComplete("reaction", s)} onCancel={handleGameCancel} />}
+      {activeGame === "quiz" && <PetQuizGame onComplete={(s) => handleGameComplete("quiz", s)} onCancel={handleGameCancel} />}
+      {activeGame === "dodge" && <DodgeGame onComplete={(s) => handleGameComplete("dodge", s)} onCancel={handleGameCancel} />}
+      {activeGame === "whack" && <WhackGame onComplete={(s) => handleGameComplete("whack", s)} onCancel={handleGameCancel} />}
+      {activeGame === "snake" && <SnakeGame onComplete={(s) => handleGameComplete("snake", s)} onCancel={handleGameCancel} />}
+      {activeGame === "flappy" && <FlappyGame onComplete={(s) => handleGameComplete("flappy", s)} onCancel={handleGameCancel} />}
+      {activeGame === "puzzle" && <PuzzleGame onComplete={(s) => handleGameComplete("puzzle", s)} onCancel={handleGameCancel} />}
+      {activeGame === "colorMatch" && <ColorMatchGame onComplete={(s) => handleGameComplete("colorMatch", s)} onCancel={handleGameCancel} />}
+      {activeGame === "rhythm" && <RhythmGame onComplete={(s) => handleGameComplete("rhythm", s)} onCancel={handleGameCancel} />}
 
-      {/* Achievement toast */}
-      {achievementToast && (
-        <AchievementToast name={achievementToast.name} icon={achievementToast.icon} />
-      )}
+      {achievementToast && <AchievementToast name={achievementToast.name} icon={achievementToast.icon} />}
 
-      {/* UI layer */}
-      <div className="relative z-10 min-h-screen p-4 md:p-8 grid md:grid-cols-[auto_1fr] gap-6 items-start">
-        <div className="w-full max-w-sm flex flex-col gap-4">
-          <ControlPanel
-            followCursor={followCursor}
-            onToggleFollow={(v) => {
-              setFollowCursor(v);
-              window.pixelpets?.setFollow(v);
-            }}
-            petCount={1}
-            onAddPet={setPet}
-            onClearPets={() => {}}
+      {/* ═══ TOP BAR ═══ */}
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border/40 glass">
+        <div className="flex items-center gap-3">
+          <h1 className="font-display text-sm text-neon">🐾 PIXEL<span className="text-neon-pink">PETS</span></h1>
+          <span className="text-[8px] font-display text-muted-foreground">Lv.{gameState.level}</span>
+          <span className="text-[8px] font-display text-neon">{gameState.xp}XP</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <WeatherWidget />
+        </div>
+      </header>
+
+      {/* ═══ MAIN CONTENT ═══ */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {activeTab === "pet" && (
+          <TabPet
+            currentKind={currentKind}
+            setPet={setPet}
             gameState={gameState}
-            onStartGame={setActiveGame}
-            onAchievementUnlock={showAchievementToast}
-            onPomodoroWorkEnd={handlePomodoroWorkEnd}
-            onPomodoroBreakEnd={handlePomodoroBreakEnd}
-            activePetKind={currentKind}
-            petName={gameState.petNames[currentKind] ?? ""}
-            onPetNameChange={(name) => gameState.setPetName(currentKind, name)}
-            onFeedWithFood={handleFeedWithFood}
-            activePets={[currentKind]}
-          />
-
-          {/* Stats panel — reads from overlay via IPC */}
-          <StatsPanel
             stats={stats}
-            petName={currentPetName}
+            currentPetName={currentPetName}
             awareness={awareness}
             onFeed={handleFeed}
             onPlay={handlePlay}
             onSleep={handleSleep}
-            gameState={gameState}
-            activePetKind={currentKind}
+            onFeedWithFood={handleFeedWithFood}
+            followCursor={followCursor}
+            setFollowCursor={(v) => { setFollowCursor(v); window.pixelpets?.setFollow(v); }}
           />
-
-          {/* Leaderboard */}
-          {Object.keys(gameState.petXpHistory).length > 0 && (
-            <Leaderboard gameState={gameState} />
-          )}
-
-          <WidgetPanel />
-          <VolumeControl />
-        </div>
-
-        {/* Pet Spotlight */}
-        <section className="hidden md:flex flex-col gap-6 max-w-2xl mx-auto justify-center min-h-[80vh] pointer-events-none">
-          <PetSpotlight activePetKind={currentKind} gameState={gameState} />
-
-          {/* Animated stats counter */}
-          <div className="mt-8 pointer-events-auto">
-            <AnimatedCounter />
-          </div>
-        </section>
+        )}
+        {activeTab === "games" && (
+          <TabGames onStartGame={setActiveGame} gameState={gameState} />
+        )}
+        {activeTab === "adventure" && (
+          <TabAdventure gameState={gameState} onStartBossFight={setActiveGame} />
+        )}
+        {activeTab === "social" && (
+          <TabSocial gameState={gameState} activePetKind={currentKind} />
+        )}
+        {activeTab === "settings" && (
+          <TabSettings gameState={gameState} />
+        )}
       </div>
+
+      {/* ═══ BOTTOM TAB BAR ═══ */}
+      <nav className="flex border-t border-border/40 glass">
+        {([
+          { id: "pet" as TabId, icon: "🐾", label: "Pet" },
+          { id: "games" as TabId, icon: "🎮", label: "Games" },
+          { id: "adventure" as TabId, icon: "🗺️", label: "Worlds" },
+          { id: "social" as TabId, icon: "🔄", label: "Social" },
+          { id: "settings" as TabId, icon: "⚙️", label: "Settings" },
+        ]).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 py-3 flex flex-col items-center gap-0.5 transition-all ${
+              activeTab === tab.id
+                ? "text-neon border-t-2 border-neon bg-neon/5"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span className="text-base">{tab.icon}</span>
+            <span className="font-display text-[7px]">{tab.label}</span>
+          </button>
+        ))}
+      </nav>
     </main>
   );
 }
 
-const root = document.getElementById("root");
-if (root) createRoot(root).render(<ElectronApp />);
-
-const PERSONALITY_TRAITS: Record<string, string> = {
-  cat: "Sleepy & Judgy",
-  dog: "Loyal & Playful",
-  slime: "Chill & Bouncy",
-  dragon: "Fierce & Hungry",
-  ghost: "Shy & Mysterious",
-  robot: "Logical & Efficient",
-  axolotl: "Cute & Regenerative",
-  capybara: "Ultra Chill",
-  penguin: "Dapper & Cool",
-  fox: "Clever & Quick",
-  panda: "Lazy & Cuddly",
-  unicorn: "Magical & Unique",
-  bunny: "Fluffy & Hoppy",
-  monkey: "Mischievous",
-  cthulhu: "Chaotic & Cosmic",
-  pikachu: "Electric & Energetic",
-  kirby: "Hungry & Powerful",
-  creeper: "Explosive",
-  yoshi: "Friendly & Helpful",
-  sonic: "Fast & Impatient",
-  doge: "Much Wow",
-};
-
-function PetSpotlight({ activePetKind, gameState }: { activePetKind: PetKind; gameState: ReturnType<typeof useGameState> }) {
+// ═══════════ TAB: PET ═══════════
+function TabPet({ currentKind, setPet, gameState, stats, currentPetName, awareness, onFeed, onPlay, onSleep, onFeedWithFood, followCursor, setFollowCursor }: {
+  currentKind: PetKind;
+  setPet: (k: PetKind) => void;
+  gameState: ReturnType<typeof useGameState>;
+  stats: PetStats | null;
+  currentPetName: string;
+  awareness: any;
+  onFeed: () => void;
+  onPlay: () => void;
+  onSleep: () => void;
+  onFeedWithFood: (food: FoodItem) => void;
+  followCursor: boolean;
+  setFollowCursor: (v: boolean) => void;
+}) {
   const [step, setStep] = useState(0);
-  const [thought, setThought] = useState(() => randomThought(activePetKind));
+  const [thought, setThought] = useState(() => randomThought(currentKind));
 
   useEffect(() => {
     const id = setInterval(() => setStep((s) => s + 1), 300);
@@ -441,53 +278,315 @@ function PetSpotlight({ activePetKind, gameState }: { activePetKind: PetKind; ga
   }, []);
 
   useEffect(() => {
-    setThought(randomThought(activePetKind));
-    const id = setInterval(() => setThought(randomThought(activePetKind)), 8000);
+    setThought(randomThought(currentKind));
+    const id = setInterval(() => setThought(randomThought(currentKind)), 8000);
     return () => clearInterval(id);
-  }, [activePetKind]);
+  }, [currentKind]);
 
-  const def = PETS[activePetKind];
-  const petName = gameState.petNames[activePetKind] || def.name;
-  const trait = PERSONALITY_TRAITS[activePetKind] || "Unique & Special";
-  const petLevel = gameState.petXpHistory[activePetKind]
-    ? Math.floor((gameState.petXpHistory[activePetKind] ?? 0) / 100) + 1
-    : 1;
+  const def = PETS[currentKind];
+  const petLevel = Math.floor((gameState.petXpHistory[currentKind] ?? 0) / 100) + 1;
 
   return (
-    <div className="glass rounded-2xl p-8 border border-border/60 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
-        background: "radial-gradient(ellipse at center, var(--primary) 0%, transparent 70%)"
-      }} />
-
-      <div className="relative flex flex-col items-center gap-4">
-        <div className="w-32 h-32 animate-bob">
-          {def.render("right", step)}
-        </div>
-
-        <div className="text-center">
-          <h3 className="font-display text-xl text-neon">{petName}</h3>
-          <p className="font-display text-[10px] text-neon-pink mt-1">{trait}</p>
-        </div>
-
-        <div className="glass rounded-lg px-4 py-2 border border-primary/30 min-h-[36px] flex items-center">
-          <p className="text-xs text-muted-foreground italic text-center">💭 "{thought}"</p>
-        </div>
-
-        <div className="flex gap-4 mt-2">
-          <div className="text-center">
-            <p className="font-display text-lg text-neon tabular-nums">L{petLevel}</p>
-            <p className="font-display text-[7px] text-muted-foreground">LEVEL</p>
+    <div className="flex flex-col gap-4">
+      {/* Pet spotlight card */}
+      <div className="glass rounded-2xl p-6 border border-border/60 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-15 pointer-events-none" style={{
+          background: "radial-gradient(ellipse at center, var(--primary) 0%, transparent 70%)"
+        }} />
+        <div className="relative flex items-center gap-5">
+          <div className="w-20 h-20 animate-bob flex-shrink-0">
+            {def.render("right", step)}
           </div>
-          <div className="text-center">
-            <p className="font-display text-lg text-neon tabular-nums">{gameState.level}</p>
-            <p className="font-display text-[7px] text-muted-foreground">TRAINER</p>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-display text-lg text-neon truncate">{currentPetName}</h2>
+            <p className="text-[9px] text-muted-foreground italic mt-0.5">💭 "{thought}"</p>
+            <div className="flex gap-3 mt-2">
+              <span className="font-display text-[9px] text-neon">L{petLevel}</span>
+              <span className="font-display text-[9px] text-muted-foreground">{gameState.petXpHistory[currentKind] ?? 0} XP</span>
+            </div>
           </div>
-          <div className="text-center">
-            <p className="font-display text-lg text-neon tabular-nums">{gameState.achievements.length}</p>
-            <p className="font-display text-[7px] text-muted-foreground">BADGES</p>
-          </div>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className="grid grid-cols-3 gap-2">
+        <button onClick={onFeed} className="py-3 rounded-xl border border-border/40 hover:border-neon/50 font-display text-[10px] transition-all glass">🍖 Feed</button>
+        <button onClick={onPlay} className="py-3 rounded-xl border border-border/40 hover:border-neon/50 font-display text-[10px] transition-all glass">🎾 Play</button>
+        <button onClick={onSleep} className="py-3 rounded-xl border border-border/40 hover:border-neon/50 font-display text-[10px] transition-all glass">😴 Sleep</button>
+      </div>
+
+      {/* Stats */}
+      <StatsPanel
+        stats={stats}
+        petName={currentPetName}
+        awareness={awareness}
+        onFeed={onFeed}
+        onPlay={onPlay}
+        onSleep={onSleep}
+        gameState={gameState}
+        activePetKind={currentKind}
+      />
+
+      {/* Food inventory */}
+      <FoodInventory gameState={gameState} activePetKind={currentKind} onFeedWithFood={onFeedWithFood} />
+
+      {/* Daily missions */}
+      <DailyMissions gameState={gameState} />
+
+      {/* Pet selector */}
+      <div className="glass rounded-xl p-3 border border-border/40">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-display text-[9px] text-muted-foreground">SWITCH PET</h4>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={followCursor} onChange={(e) => setFollowCursor(e.target.checked)} className="w-3 h-3 accent-[var(--neon)]" />
+            <span className="text-[8px] text-muted-foreground">Follow cursor</span>
+          </label>
+        </div>
+        <div className="grid grid-cols-8 gap-1.5 max-h-40 overflow-y-auto">
+          {PET_LIST.map((k) => {
+            const d = PETS[k];
+            return (
+              <button
+                key={k}
+                onClick={() => setPet(k)}
+                className={`aspect-square rounded-lg border transition-all flex items-center justify-center ${
+                  currentKind === k
+                    ? "border-neon bg-neon/10 shadow-[0_0_8px_var(--neon)]"
+                    : "border-border/30 hover:border-neon/40"
+                }`}
+                title={d.name}
+              >
+                <div className="w-7 h-7">{d.render("right", 0)}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
+
+// ═══════════ TAB: GAMES ═══════════
+function TabGames({ onStartGame, gameState }: { onStartGame: (g: string) => void; gameState: ReturnType<typeof useGameState> }) {
+  const games = [
+    { id: "catch", icon: "🎯", label: "Catch", desc: "Catch falling items" },
+    { id: "memory", icon: "🧠", label: "Memory", desc: "Match pairs" },
+    { id: "simon", icon: "🎵", label: "Simon", desc: "Repeat the pattern" },
+    { id: "typing", icon: "⌨️", label: "Typing", desc: "Type fast!" },
+    { id: "reaction", icon: "⚡", label: "Reaction", desc: "Click when green" },
+    { id: "quiz", icon: "❓", label: "Quiz", desc: "Pet trivia" },
+    { id: "dodge", icon: "🏃", label: "Dodge", desc: "Avoid obstacles" },
+    { id: "whack", icon: "🔨", label: "Whack", desc: "Hit the moles" },
+    { id: "snake", icon: "🐍", label: "Snake", desc: "Classic snake" },
+    { id: "flappy", icon: "🐦", label: "Flappy", desc: "Fly through pipes" },
+    { id: "puzzle", icon: "🧩", label: "Puzzle", desc: "Slide tiles" },
+    { id: "colorMatch", icon: "🎨", label: "Color", desc: "Match colors" },
+    { id: "rhythm", icon: "🎶", label: "Rhythm", desc: "Hit the beat" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-center">
+        <h2 className="font-display text-sm text-neon">🎮 MINI-GAMES</h2>
+        <p className="text-[9px] text-muted-foreground mt-1">Win games to earn food & XP</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {games.map((g) => {
+          const played = (gameState.gamesPlayed as any)[g.id] || 0;
+          return (
+            <button
+              key={g.id}
+              onClick={() => onStartGame(g.id)}
+              className="glass rounded-xl p-3 border border-border/40 hover:border-neon/50 transition-all text-center group"
+            >
+              <span className="text-xl block group-hover:animate-bob">{g.icon}</span>
+              <p className="font-display text-[9px] mt-1">{g.label}</p>
+              <p className="text-[7px] text-muted-foreground">{g.desc}</p>
+              {played > 0 && <p className="text-[7px] text-neon mt-0.5">×{played}</p>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════ TAB: ADVENTURE ═══════════
+function TabAdventure({ gameState, onStartBossFight }: { gameState: ReturnType<typeof useGameState>; onStartBossFight: (g: string) => void }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-center">
+        <h2 className="font-display text-sm text-neon">🗺️ ADVENTURE MODE</h2>
+        <p className="text-[9px] text-muted-foreground mt-1">Explore worlds, defeat bosses, earn rare food</p>
+      </div>
+      <AdventureMode gameState={gameState} onStartBossFight={onStartBossFight} />
+    </div>
+  );
+}
+
+// ═══════════ TAB: SOCIAL ═══════════
+function TabSocial({ gameState, activePetKind }: { gameState: ReturnType<typeof useGameState>; activePetKind: PetKind }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-center">
+        <h2 className="font-display text-sm text-neon">🔄 SOCIAL</h2>
+        <p className="text-[9px] text-muted-foreground mt-1">Trade pets with friends</p>
+      </div>
+      <PetTrading gameState={gameState} activePetKind={activePetKind} />
+
+      {/* Achievements */}
+      <div className="glass rounded-xl p-3 border border-border/40">
+        <h4 className="font-display text-[9px] text-muted-foreground mb-2">🏆 ACHIEVEMENTS ({gameState.achievements.length}/{ACHIEVEMENTS.length})</h4>
+        <div className="grid grid-cols-5 gap-1.5">
+          {ACHIEVEMENTS.map((ach) => {
+            const unlocked = gameState.achievements.includes(ach.id);
+            return (
+              <div key={ach.id}
+                className={`aspect-square rounded-md border flex items-center justify-center text-lg transition-all ${unlocked ? "border-primary/60 bg-primary/10 shadow-[0_0_6px_var(--primary)]" : "border-border bg-secondary/20 opacity-30 grayscale"}`}
+                title={unlocked ? ach.name.en : "???"}
+              >
+                <span>{ach.icon}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Leaderboard */}
+      {Object.keys(gameState.petXpHistory).length > 0 && (
+        <div className="glass rounded-xl p-3 border border-border/40">
+          <h4 className="font-display text-[9px] text-muted-foreground mb-2">📊 PET LEADERBOARD</h4>
+          <div className="flex flex-col gap-1">
+            {Object.entries(gameState.petXpHistory)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 5)
+              .map(([kind, xp], i) => (
+                <div key={kind} className="flex items-center gap-2 py-1">
+                  <span className="font-display text-[9px] text-muted-foreground w-4">{i + 1}.</span>
+                  <div className="w-5 h-5">{PETS[kind as PetKind]?.render("right", 0)}</div>
+                  <span className="font-display text-[9px] flex-1">{gameState.petNames[kind] || PETS[kind as PetKind]?.name || kind}</span>
+                  <span className="font-display text-[8px] text-neon">{xp}XP</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════ TAB: SETTINGS ═══════════
+function TabSettings({ gameState }: { gameState: ReturnType<typeof useGameState> }) {
+  const sounds = [
+    { id: "rain", icon: "🌧️" }, { id: "lofi", icon: "🎵" }, { id: "nature", icon: "🌿" },
+    { id: "cafe", icon: "☕" }, { id: "storm", icon: "⛈️" }, { id: "space", icon: "🚀" },
+    { id: "fireplace", icon: "🔥" }, { id: "ocean", icon: "🌊" }, { id: "city", icon: "🌃" },
+    { id: "whispers", icon: "👁️" }, { id: "heartbeat", icon: "💀" }, { id: "dungeon", icon: "⛓️" },
+    { id: "void", icon: "🕳️" }, { id: "silent", icon: "🔇" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-center">
+        <h2 className="font-display text-sm text-neon">⚙️ SETTINGS</h2>
+      </div>
+
+      {/* Theme */}
+      <div className="glass rounded-xl p-3 border border-border/40">
+        <h4 className="font-display text-[9px] text-muted-foreground mb-2">🎨 THEME</h4>
+        <div className="flex gap-2">
+          {THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => { gameState.setTheme(theme.id); applyTheme(theme.id as ThemeId); }}
+              className={`w-8 h-8 rounded-full border-2 transition-all ${
+                gameState.theme === theme.id
+                  ? "border-foreground scale-110 shadow-[0_0_10px_var(--neon)]"
+                  : "border-border hover:border-foreground/60"
+              }`}
+              style={{ background: theme.color }}
+              title={theme.label}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Ambient sound */}
+      <div className="glass rounded-xl p-3 border border-border/40">
+        <h4 className="font-display text-[9px] text-muted-foreground mb-2">🎵 AMBIENT SOUND</h4>
+        <div className="grid grid-cols-7 gap-1.5">
+          {sounds.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => gameState.setAmbientSound(s.id)}
+              className={`aspect-square rounded-lg border flex items-center justify-center text-base transition-all ${
+                gameState.ambientSound === s.id
+                  ? "border-neon bg-neon/10"
+                  : "border-border/30 hover:border-neon/40"
+              }`}
+              title={s.id}
+            >
+              {s.icon}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Pomodoro */}
+      <div className="glass rounded-xl p-3 border border-border/40">
+        <h4 className="font-display text-[9px] text-muted-foreground mb-2">🍅 POMODORO</h4>
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <label className="text-[8px] font-display text-muted-foreground">WORK
+            <select value={gameState.pomodoroConfig.workMinutes} onChange={(e) => gameState.setPomodoroConfig({ ...gameState.pomodoroConfig, workMinutes: Number(e.target.value) })}
+              className="block w-full mt-0.5 px-1 py-1 rounded border border-border bg-secondary/40 text-foreground text-[9px] font-display">
+              <option value={15}>15 min</option><option value={25}>25 min</option><option value={45}>45 min</option>
+            </select>
+          </label>
+          <label className="text-[8px] font-display text-muted-foreground">BREAK
+            <select value={gameState.pomodoroConfig.breakMinutes} onChange={(e) => gameState.setPomodoroConfig({ ...gameState.pomodoroConfig, breakMinutes: Number(e.target.value) })}
+              className="block w-full mt-0.5 px-1 py-1 rounded border border-border bg-secondary/40 text-foreground text-[9px] font-display">
+              <option value={5}>5 min</option><option value={10}>10 min</option><option value={15}>15 min</option>
+            </select>
+          </label>
+        </div>
+        <PomodoroTimer
+          workMinutes={gameState.pomodoroConfig.workMinutes}
+          breakMinutes={gameState.pomodoroConfig.breakMinutes}
+          onWorkEnd={() => window.pixelpets?.petAction("pomodoroWorkEnd")}
+          onBreakEnd={() => window.pixelpets?.petAction("pomodoroBreakEnd")}
+        />
+      </div>
+
+      {/* Accessories */}
+      <div className="glass rounded-xl p-3 border border-border/40">
+        <h4 className="font-display text-[9px] text-muted-foreground mb-2">👗 ACCESSORIES</h4>
+        <div className="grid grid-cols-3 gap-2">
+          {getUnlockedAccessories(gameState.level).map((acc) => {
+            const isEquipped = gameState.accessories[acc.slot] === acc.id;
+            return (
+              <button key={acc.id}
+                onClick={() => gameState.equipAccessory(acc.slot, isEquipped ? null : acc.id)}
+                className={`px-2 py-2 rounded-lg border transition-all font-display text-[8px] flex flex-col items-center gap-0.5 ${isEquipped ? "border-primary bg-primary/10 shadow-[0_0_8px_var(--primary)]" : "border-border/30 hover:border-neon/40"}`}
+              >
+                <span className="text-sm">{acc.id === "basic-hat" ? "🎩" : acc.id === "glasses" ? "👓" : acc.id === "bow" ? "🎀" : acc.id === "scarf" ? "🧣" : acc.id === "cape" ? "🦸" : "🌙"}</span>
+                <span className="truncate w-full text-center">{acc.name.en}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Volume */}
+      <VolumeControl />
+
+      {/* Info */}
+      <div className="glass rounded-xl p-3 border border-border/40 text-center">
+        <p className="font-display text-[8px] text-muted-foreground">PixelPets v2.3.0</p>
+        <p className="text-[8px] text-muted-foreground mt-1">Streak: {gameState.streakDays} days 🔥</p>
+      </div>
+    </div>
+  );
+}
+
+const root = document.getElementById("root");
+if (root) createRoot(root).render(<ElectronApp />);

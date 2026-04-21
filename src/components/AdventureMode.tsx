@@ -13,7 +13,7 @@ export function AdventureMode({ gameState, onStartBossFight }: Props) {
   const [exploreProgress, setExploreProgress] = useState(0);
 
   const availableWorlds = getAvailableWorlds(gameState.level);
-  const currentAdventure = gameState.currentAdventure;
+  const currentAdventure = gameState.currentAdventure || null;
 
   // Handle exploration timer
   useEffect(() => {
