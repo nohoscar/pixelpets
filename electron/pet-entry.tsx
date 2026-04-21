@@ -14,6 +14,7 @@ declare global {
       onSetFollow: (cb: (value: boolean) => void) => void;
       onPetAction: (cb: (action: string) => void) => void;
       sendStats: (stats: PetStats) => void;
+      setIgnoreMouseEvents: (ignore: boolean) => void;
     };
   }
 }
@@ -71,13 +72,36 @@ function PetOverlay() {
   }, []);
 
   // Track mouse position — throttled to reduce overhead
+  // Also handle hit-testing: when mouse is over the pet, make window clickable
+  const petPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
   useEffect(() => {
     let last = 0;
+    let isIgnoring = true;
+    const PET_SIZE = 48; // approximate pet size for hit detection
+    const MARGIN = 10;
+
     const handler = (e: MouseEvent) => {
       const now = Date.now();
-      if (now - last < 50) return; // max 20fps for cursor tracking
+      if (now - last < 32) return; // ~30fps
       last = now;
       cursorRef.current = { x: e.clientX, y: e.clientY };
+
+      // Hit-test: is mouse over the pet?
+      const pp = petPosRef.current;
+      const overPet =
+        e.clientX >= pp.x - MARGIN &&
+        e.clientX <= pp.x + PET_SIZE + MARGIN &&
+        e.clientY >= pp.y - MARGIN &&
+        e.clientY <= pp.y + PET_SIZE + MARGIN;
+
+      if (overPet && isIgnoring) {
+        isIgnoring = false;
+        window.pixelpets?.setIgnoreMouseEvents?.(false);
+      } else if (!overPet && !isIgnoring) {
+        isIgnoring = true;
+        window.pixelpets?.setIgnoreMouseEvents?.(true);
+      }
     };
     window.addEventListener("mousemove", handler, { passive: true });
     return () => window.removeEventListener("mousemove", handler);
@@ -111,6 +135,7 @@ function PetOverlay() {
       awareness={awareness}
       onStatsChange={handleStatsChange}
       actionRef={actionRef}
+      onPositionChange={(pos) => { petPosRef.current = pos; }}
     />
   );
 }

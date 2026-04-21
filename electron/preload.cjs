@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld("pixelpets", {
   setCursor: (name) => ipcRenderer.send("set-cursor", name),
   // Pet overlay → main → panel (stats updates)
   sendStats: (stats) => ipcRenderer.send("stats-update", stats),
+  // Pet overlay → main (mouse ignore toggle)
+  setIgnoreMouseEvents: (ignore) => ipcRenderer.send("set-ignore-mouse", ignore),
   // Listeners
   onSetPet: (cb) => ipcRenderer.on("set-pet", (_e, kind) => cb(kind)),
   onSetFollow: (cb) => ipcRenderer.on("set-follow", (_e, val) => cb(val)),

@@ -331,6 +331,13 @@ ipcMain.on("stats-update", (_e, stats) => {
   if (panelWindow) panelWindow.webContents.send("stats-update", stats);
 });
 
+// Pet overlay: toggle mouse ignore for click-through
+ipcMain.on("set-ignore-mouse", (_e, ignore) => {
+  if (petWindow) {
+    petWindow.setIgnoreMouseEvents(!!ignore, { forward: true });
+  }
+});
+
 
 
 app.whenReady().then(() => {
