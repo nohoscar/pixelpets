@@ -43,7 +43,7 @@ export function AdventureMode({ gameState, onStartBossFight }: Props) {
     }, 300);
 
     return () => clearInterval(id);
-  }, [exploring?.stageId]); // only re-run when a NEW stage starts
+  }, [exploring]); // re-run whenever exploring changes
 
   const startExplore = (worldId: string, stageId: string) => {
     const world = WORLDS.find((w) => w.id === worldId);
