@@ -3,12 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { ControlPanel } from "@/components/ControlPanel";
 import { Pet, type PetStats } from "@/components/pets/Pet";
 import { PETS, type PetKind } from "@/components/pets/petSprites";
-import { CURSORS, CURSOR_SOUND, type CursorKind } from "@/components/cursors/cursors";
 import { StatsPanel } from "@/components/StatsPanel";
 import { VolumeControl } from "@/components/VolumeControl";
 import { useSystemAwareness } from "@/hooks/useSystemAwareness";
 import { useGameState } from "@/hooks/useGameState";
-import { playSound } from "@/lib/audio";
 import { CatchGame } from "@/components/games/CatchGame";
 import { MemoryGame } from "@/components/games/MemoryGame";
 import { SimonGame } from "@/components/games/SimonGame";
@@ -32,6 +30,7 @@ import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { Leaderboard } from "@/components/Leaderboard";
 import { SeasonalBackground } from "@/components/SeasonalBackground";
 import { PetDiary } from "@/components/PetDiary";
+import { randomThought } from "@/components/pets/petThoughts";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -66,7 +65,6 @@ function Index() {
 
 function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState> }) {
   const [pets, setPets] = useState<PetInstance[]>([{ id: "p1", kind: "cat" }]);
-  const [cursor, setCursor] = useState<CursorKind>("csgo");
   const [followCursor, setFollowCursor] = useState(false);
   const [stats, setStats] = useState<PetStats | null>(null);
   const [activeGame, setActiveGame] = useState<"catch" | "memory" | "simon" | "typing" | "reaction" | "quiz" | "dodge" | "whack" | "snake" | "flappy" | "puzzle" | "colorMatch" | "rhythm" | null>(null);
@@ -223,26 +221,6 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
     window.addEventListener("mousemove", handler);
     return () => window.removeEventListener("mousemove", handler);
   }, []);
-
-  useEffect(() => {
-    const value = CURSORS[cursor].value;
-    document.body.style.cursor = value;
-    return () => { document.body.style.cursor = ""; };
-  }, [cursor]);
-
-  // Sound when clicking with weapon/tool cursor
-  useEffect(() => {
-    const sound = CURSOR_SOUND[cursor];
-    if (!sound) return;
-    const handler = (e: MouseEvent) => {
-      // skip if click landed on an interactive control
-      const t = e.target as HTMLElement;
-      if (t.closest("button, a, input, label")) return;
-      playSound(sound as Parameters<typeof playSound>[0]);
-    };
-    window.addEventListener("mousedown", handler);
-    return () => window.removeEventListener("mousedown", handler);
-  }, [cursor]);
 
   // Pet interaction detection (task 9.2)
   useEffect(() => {
@@ -422,8 +400,6 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
       <div className="relative z-10 min-h-screen p-4 md:p-8 grid md:grid-cols-[auto_1fr] gap-6 items-start">
         <div className="w-full max-w-sm flex flex-col gap-4">
           <ControlPanel
-            cursor={cursor}
-            onCursor={setCursor}
             followCursor={followCursor}
             onToggleFollow={setFollowCursor}
             petCount={pets.length}
@@ -458,53 +434,9 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
           <VolumeControl />
         </div>
 
-        {/* Hero / explainer */}
+        {/* Pet Spotlight */}
         <section className="hidden md:flex flex-col gap-6 max-w-2xl mx-auto justify-center min-h-[80vh] pointer-events-none">
-          <p className="font-display text-[10px] text-neon-pink animate-flicker">
-            {t("hero.tag")}
-          </p>
-          <h2 className="font-display text-3xl md:text-5xl leading-tight">
-            <span className="text-neon">{t("hero.title1")}</span>
-            <br />
-            <span className="text-foreground">{t("hero.title2")}</span>{" "}
-            <span className="text-neon-pink">{t("hero.title3")}</span>
-          </h2>
-          <p className="text-sm text-muted-foreground max-w-md">
-            {t("hero.desc")}
-          </p>
-
-          <div className="flex flex-wrap gap-3 mt-2 pointer-events-auto">
-            <Link
-              to="/buy"
-              className="px-5 py-2.5 rounded-md bg-primary text-primary-foreground font-display text-[10px] hover:shadow-[0_0_24px_var(--primary)] transition-all"
-            >
-              {t("hero.download")}
-            </Link>
-            <a
-              href="#how"
-              className="px-4 py-2 rounded-md border border-primary/50 bg-primary/10 text-primary font-display text-[10px] hover:bg-primary/20 transition-all"
-            >
-              {t("hero.howItWorks")}
-            </a>
-          </div>
-
-          <div id="how" className="mt-12 grid grid-cols-3 gap-4 pointer-events-auto">
-            {[
-              { n: "01", t: t("hero.step1.title"), d: t("hero.step1.desc") },
-              { n: "02", t: t("hero.step2.title"), d: t("hero.step2.desc") },
-              { n: "03", t: t("hero.step3.title"), d: t("hero.step3.desc") },
-            ].map((s) => (
-              <div key={s.n} className="glass rounded-lg p-4">
-                <p className="font-display text-[10px] text-neon">{s.n}</p>
-                <p className="font-display text-xs mt-2">{s.t}</p>
-                <p className="text-[11px] text-muted-foreground mt-1">{s.d}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-[10px] font-display text-muted-foreground mt-8">
-            {t("hero.footer")}
-          </p>
+          <PetSpotlight activePetKind={activePetKind ?? "cat"} gameState={gameState} />
 
           {/* Animated stats counter */}
           <div className="mt-8 pointer-events-auto">
@@ -513,5 +445,95 @@ function IndexContent({ gameState }: { gameState: ReturnType<typeof useGameState
         </section>
       </div>
     </main>
+  );
+}
+
+const PERSONALITY_TRAITS: Record<string, string> = {
+  cat: "Sleepy & Judgy",
+  dog: "Loyal & Playful",
+  slime: "Chill & Bouncy",
+  dragon: "Fierce & Hungry",
+  ghost: "Shy & Mysterious",
+  robot: "Logical & Efficient",
+  axolotl: "Cute & Regenerative",
+  capybara: "Ultra Chill",
+  penguin: "Dapper & Cool",
+  fox: "Clever & Quick",
+  panda: "Lazy & Cuddly",
+  unicorn: "Magical & Unique",
+  bunny: "Fluffy & Hoppy",
+  monkey: "Mischievous",
+  cthulhu: "Chaotic & Cosmic",
+  pikachu: "Electric & Energetic",
+  kirby: "Hungry & Powerful",
+  creeper: "Explosive",
+  yoshi: "Friendly & Helpful",
+  sonic: "Fast & Impatient",
+  doge: "Much Wow",
+};
+
+function PetSpotlight({ activePetKind, gameState }: { activePetKind: PetKind; gameState: ReturnType<typeof useGameState> }) {
+  const [step, setStep] = useState(0);
+  const [thought, setThought] = useState(() => randomThought(activePetKind));
+
+  useEffect(() => {
+    const id = setInterval(() => setStep((s) => s + 1), 300);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    setThought(randomThought(activePetKind));
+    const id = setInterval(() => setThought(randomThought(activePetKind)), 8000);
+    return () => clearInterval(id);
+  }, [activePetKind]);
+
+  const def = PETS[activePetKind];
+  const petName = gameState.petNames[activePetKind] || def.name;
+  const trait = PERSONALITY_TRAITS[activePetKind] || "Unique & Special";
+  const petLevel = gameState.petXpHistory[activePetKind]
+    ? Math.floor((gameState.petXpHistory[activePetKind] ?? 0) / 100) + 1
+    : 1;
+
+  return (
+    <div className="glass rounded-2xl p-8 border border-border/60 relative overflow-hidden">
+      {/* Glow background */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
+        background: "radial-gradient(ellipse at center, var(--primary) 0%, transparent 70%)"
+      }} />
+
+      <div className="relative flex flex-col items-center gap-4">
+        {/* Large pet render */}
+        <div className="w-32 h-32 animate-bob">
+          {def.render("right", step)}
+        </div>
+
+        {/* Pet name & trait */}
+        <div className="text-center">
+          <h3 className="font-display text-xl text-neon">{petName}</h3>
+          <p className="font-display text-[10px] text-neon-pink mt-1">{trait}</p>
+        </div>
+
+        {/* Thought bubble */}
+        <div className="glass rounded-lg px-4 py-2 border border-primary/30 min-h-[36px] flex items-center">
+          <p className="text-xs text-muted-foreground italic text-center">💭 "{thought}"</p>
+        </div>
+
+        {/* Stats row */}
+        <div className="flex gap-4 mt-2">
+          <div className="text-center">
+            <p className="font-display text-lg text-neon tabular-nums">L{petLevel}</p>
+            <p className="font-display text-[7px] text-muted-foreground">LEVEL</p>
+          </div>
+          <div className="text-center">
+            <p className="font-display text-lg text-neon tabular-nums">{gameState.level}</p>
+            <p className="font-display text-[7px] text-muted-foreground">TRAINER</p>
+          </div>
+          <div className="text-center">
+            <p className="font-display text-lg text-neon tabular-nums">{gameState.achievements.length}</p>
+            <p className="font-display text-[7px] text-muted-foreground">BADGES</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -332,16 +332,7 @@ ipcMain.on("stats-update", (_e, stats) => {
   if (panelWindow) panelWindow.webContents.send("stats-update", stats);
 });
 
-// Pet overlay: dynamic click-through based on mouse position over pet
-ipcMain.on("set-mouse-hit", (_e, hit) => {
-  if (petWindow) {
-    if (hit) {
-      petWindow.setIgnoreMouseEvents(false);
-    } else {
-      petWindow.setIgnoreMouseEvents(true, { forward: true });
-    }
-  }
-});
+
 
 app.whenReady().then(() => {
   createPanelWindow();

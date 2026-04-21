@@ -106,7 +106,7 @@ function renderAccessorySvg(id: AccessoryId, facing: "left" | "right") {
 }
 
 export function AccessoryRenderer({ equipped, facing, petSize, petState }: AccessoryRendererProps) {
-  const slots: AccessorySlot[] = ["back", "special", "neck", "head", "eyes"];
+  const slots: AccessorySlot[] = ["back", "neck", "head", "eyes", "special"];
   const activeAccessories = slots
     .map((slot) => equipped[slot])
     .filter((id): id is string => id !== null);

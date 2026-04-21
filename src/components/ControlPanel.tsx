@@ -1,5 +1,4 @@
 import { PET_LIST, PETS, type PetKind } from "./pets/petSprites";
-import { CURSORS, CURSOR_PREVIEWS, type CursorKind } from "./cursors/cursors";
 import type { GameState } from "@/hooks/useGameState";
 import { getUnlockedAccessories, getLockedAccessories } from "./pets/accessories";
 import { ACHIEVEMENTS } from "@/hooks/useGameState";
@@ -12,11 +11,8 @@ import { getCurrentSeason } from "@/lib/seasons";
 const isWebDemo = typeof window !== "undefined" && !(window as any).pixelpets;
 const FREE_PETS: PetKind[] = ["cat", "dog", "slime", "dragon", "ghost"];
 const FREE_GAMES = ["catch", "memory"];
-const FREE_CURSORS: CursorKind[] = ["default", "csgo", "valorant", "bow", "sniper"];
 
 interface Props {
-  cursor: CursorKind;
-  onCursor: (c: CursorKind) => void;
   followCursor: boolean;
   onToggleFollow: (v: boolean) => void;
   petCount: number;
@@ -33,7 +29,7 @@ interface Props {
 }
 
 export function ControlPanel({
-  cursor, onCursor, followCursor, onToggleFollow,
+  followCursor, onToggleFollow,
   petCount, onAddPet, onClearPets, gameState,
   onStartGame, onAchievementUnlock,
   onPomodoroWorkEnd, onPomodoroBreakEnd,
@@ -307,36 +303,6 @@ export function ControlPanel({
           </div>
         </section>
       )}
-
-      {/* ★ CURSORS — Collapsible secondary section */}
-      <details className="mb-4">
-        <summary className="font-display text-[10px] text-muted-foreground cursor-pointer select-none hover:text-neon-pink transition-colors flex items-center gap-1">
-          <span>🎮</span> {t("control.cursor")} <span className="text-[8px] opacity-60">({Object.keys(CURSORS).length})</span>
-        </summary>
-        <div className="grid grid-cols-4 gap-1.5 mt-3">
-          {(Object.keys(CURSORS) as CursorKind[]).map((k) => {
-            const active = cursor === k;
-            const preview = CURSOR_PREVIEWS[k];
-            const isLocked = isWebDemo && !FREE_CURSORS.includes(k);
-            return (
-              <button key={k} onClick={() => !isLocked && onCursor(k)}
-                disabled={isLocked}
-                className={`relative aspect-square rounded-lg border transition-all flex items-center justify-center group ${
-                  isLocked
-                    ? "border-border bg-secondary/20 opacity-30 grayscale cursor-not-allowed"
-                    : active
-                      ? "border-primary bg-primary/10 shadow-[0_0_12px_var(--primary)]"
-                      : "border-border bg-secondary/30 hover:border-primary/60"
-                }`}
-                title={isLocked ? "🔒 Desktop app only" : CURSORS[k].sub}>
-                {preview ? <div className="w-6 h-6" dangerouslySetInnerHTML={{ __html: preview }} /> : <span className="text-lg">↖</span>}
-                {isLocked && <span className="absolute top-0 right-0 text-[7px]">🔒</span>}
-                <span className="absolute -bottom-4 left-0 right-0 text-[7px] font-display text-center text-muted-foreground group-hover:text-foreground truncate">{CURSORS[k].label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </details>
 
       <footer className="pt-3 border-t border-border">
         <p className="text-[9px] font-display text-muted-foreground leading-relaxed">{t("control.footer")}</p>

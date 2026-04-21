@@ -14,7 +14,6 @@ declare global {
       onSetFollow: (cb: (value: boolean) => void) => void;
       onPetAction: (cb: (action: string) => void) => void;
       sendStats: (stats: PetStats) => void;
-      setMouseHit: (hit: boolean) => void;
     };
   }
 }
@@ -71,46 +70,13 @@ function PetOverlay() {
     if (params.get("follow") === "1") setFollowCursor(true);
   }, []);
 
-  // Track mouse position and do hit-testing with asymmetric debounce
-  // Enter pet area: respond quickly (150ms). Leave pet area: delay 300ms to prevent flicker.
+  // Track mouse position (overlay is always click-through, no hit-testing needed)
   useEffect(() => {
-    let lastHit = false;
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
     const handler = (e: MouseEvent) => {
       cursorRef.current = { x: e.clientX, y: e.clientY };
-
-      // Check if mouse is over any pet element
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const isOverPet = el !== null && el !== document.body && el !== document.documentElement
-        && el.id !== "root" && !el.matches("#root");
-
-      if (isOverPet && !lastHit) {
-        // Entering pet area — respond quickly
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          const elNow = document.elementFromPoint(e.clientX, e.clientY);
-          const stillOverPet = elNow !== null && elNow !== document.body && elNow !== document.documentElement
-            && elNow.id !== "root" && !elNow.matches("#root");
-          if (stillOverPet && !lastHit) {
-            lastHit = true;
-            window.pixelpets?.setMouseHit(true);
-          }
-        }, 150);
-      } else if (!isOverPet && lastHit) {
-        // Leaving pet area — delay before ignoring again to prevent flicker
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          lastHit = false;
-          window.pixelpets?.setMouseHit(false);
-        }, 300);
-      }
     };
     window.addEventListener("mousemove", handler);
-    return () => {
-      window.removeEventListener("mousemove", handler);
-      if (debounceTimer) clearTimeout(debounceTimer);
-    };
+    return () => window.removeEventListener("mousemove", handler);
   }, []);
 
   // IPC listeners from main process
