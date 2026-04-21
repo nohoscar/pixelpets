@@ -6,6 +6,13 @@ import { PomodoroTimer } from "./PomodoroTimer";
 import { useI18n } from "@/lib/i18n";
 import { THEMES, applyTheme, type ThemeId } from "@/lib/themes";
 import { getCurrentSeason } from "@/lib/seasons";
+import { FoodInventory } from "./FoodInventory";
+import { DailyMissions } from "./DailyMissions";
+import { AdventureMode } from "./AdventureMode";
+import { WeatherWidget } from "./WeatherWidget";
+import { PetTrading } from "./PetTrading";
+import { PetInteractionDisplay } from "./PetInteractionDisplay";
+import type { FoodItem } from "@/lib/foodSystem";
 
 // Web demo limitations
 const isWebDemo = typeof window !== "undefined" && !(window as any).pixelpets;
@@ -26,6 +33,8 @@ interface Props {
   activePetKind?: PetKind;
   petName?: string;
   onPetNameChange?: (name: string) => void;
+  onFeedWithFood?: (food: FoodItem) => void;
+  activePets?: string[];
 }
 
 export function ControlPanel({
@@ -34,6 +43,7 @@ export function ControlPanel({
   onStartGame, onAchievementUnlock,
   onPomodoroWorkEnd, onPomodoroBreakEnd,
   activePetKind, petName, onPetNameChange,
+  onFeedWithFood, activePets,
 }: Props) {
   const level = gameState?.level ?? 1;
   const unlocked = getUnlockedAccessories(level);
@@ -260,6 +270,48 @@ export function ControlPanel({
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* Food Inventory */}
+      {gameState && activePetKind && onFeedWithFood && (
+        <section className="mb-4">
+          <FoodInventory gameState={gameState} activePetKind={activePetKind} onFeedWithFood={onFeedWithFood} />
+        </section>
+      )}
+
+      {/* Daily Missions */}
+      {gameState && (
+        <section className="mb-4">
+          <DailyMissions gameState={gameState} />
+        </section>
+      )}
+
+      {/* Adventure Mode */}
+      {gameState && onStartGame && (
+        <section className="mb-4">
+          <AdventureMode gameState={gameState} onStartBossFight={(g) => onStartGame(g as any)} />
+        </section>
+      )}
+
+      {/* Weather */}
+      {gameState && (
+        <section className="mb-4">
+          <WeatherWidget />
+        </section>
+      )}
+
+      {/* Pet Trading */}
+      {gameState && activePetKind && (
+        <section className="mb-4">
+          <PetTrading gameState={gameState} activePetKind={activePetKind} />
+        </section>
+      )}
+
+      {/* Pet Interactions */}
+      {activePets && activePets.length >= 2 && gameState && (
+        <section className="mb-4">
+          <PetInteractionDisplay activePets={activePets} onInteractionXp={(xp) => gameState.addXp(xp)} />
         </section>
       )}
 

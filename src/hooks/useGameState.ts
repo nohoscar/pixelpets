@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, type MutableRefObject } from "react";
+import { getDailyMissions, getEmptyProgress } from "../lib/dailyMissions";
 
 // --- Types ---
 
@@ -25,6 +26,16 @@ export interface PersistedGameState {
   evolvedPets: string[];  // pet kinds that have been evolved (animation shown once)
   petXpHistory: Record<string, number>; // petKind → total XP earned
   diaryEntries: { date: string; text: string }[];
+  // Food inventory
+  foodInventory: Record<string, number>; // foodId → quantity
+  // Daily missions
+  missionProgress: { date: string; missions: { id: string; progress: number; completed: boolean; claimed: boolean }[] };
+  dailyXpEarned: number; // XP earned today (resets daily)
+  dailyFoodUsed: string[]; // different foods used today
+  dailyGamesCompleted: number; // games completed today
+  // Adventure progress
+  adventureProgress: Record<string, { stagesCompleted: string[]; bossDefeated: boolean }>;
+  currentAdventure: { worldId: string; stageId: string; startedAt: number } | null;
 }
 
 export interface GameActions {
@@ -45,6 +56,17 @@ export interface GameActions {
   markEvolved: (kind: string) => void;
   addPetXp: (kind: string, amount: number) => void;
   addDiaryEntry: (text: string) => void;
+  // Food system
+  addFood: (foodId: string, quantity: number) => void;
+  useFood: (foodId: string) => boolean;
+  // Mission system
+  updateMissionProgress: (type: string, amount: number) => void;
+  claimMissionReward: (missionId: string) => void;
+  // Adventure system
+  startAdventure: (worldId: string, stageId: string) => void;
+  completeAdventureStage: (worldId: string, stageId: string) => void;
+  defeatBoss: (worldId: string) => void;
+  clearCurrentAdventure: () => void;
 }
 
 export type GameState = PersistedGameState & GameActions & {
@@ -97,6 +119,13 @@ const DEFAULT_STATE: PersistedGameState = {
   evolvedPets: [],
   petXpHistory: {},
   diaryEntries: [],
+  foodInventory: { kibble: 5, apple: 3, bread: 2 }, // starter food
+  missionProgress: { date: "", missions: [] },
+  dailyXpEarned: 0,
+  dailyFoodUsed: [],
+  dailyGamesCompleted: 0,
+  adventureProgress: {},
+  currentAdventure: null,
 };
 
 export function calculateLevel(xp: number): number {
@@ -272,6 +301,131 @@ export function useGameState(): GameState {
     persist({ ...prev, diaryEntries: entries });
   }, [persist]);
 
+  // --- Food System ---
+  const addFood = useCallback((foodId: string, quantity: number) => {
+    const prev = stateRef.current;
+    const inv = { ...prev.foodInventory };
+    inv[foodId] = (inv[foodId] || 0) + quantity;
+    persist({ ...prev, foodInventory: inv });
+  }, [persist]);
+
+  const useFood = useCallback((foodId: string): boolean => {
+    const prev = stateRef.current;
+    if ((prev.foodInventory[foodId] || 0) <= 0) return false;
+    const inv = { ...prev.foodInventory };
+    inv[foodId] = inv[foodId] - 1;
+    if (inv[foodId] <= 0) delete inv[foodId];
+    // Track daily food usage for missions
+    const dailyFoodUsed = prev.dailyFoodUsed.includes(foodId) ? prev.dailyFoodUsed : [...prev.dailyFoodUsed, foodId];
+    persist({ ...prev, foodInventory: inv, dailyFoodUsed });
+    return true;
+  }, [persist]);
+
+  // --- Mission System ---
+  const updateMissionProgress = useCallback((type: string, amount: number) => {
+    const prev = stateRef.current;
+    const today = new Date().toISOString().slice(0, 10);
+    let mp = prev.missionProgress;
+    // Reset if new day
+    if (mp.date !== today) {
+      mp = getEmptyProgress(today);
+    }
+    // Also reset daily counters if new day
+    let dailyXp = prev.dailyXpEarned;
+    let dailyGames = prev.dailyGamesCompleted;
+    let dailyFood = prev.dailyFoodUsed;
+    if (prev.missionProgress.date !== today) {
+      dailyXp = 0;
+      dailyGames = 0;
+      dailyFood = [];
+    }
+    // Update relevant counters
+    if (type === "xp") dailyXp += amount;
+    if (type === "game") dailyGames += amount;
+
+    // Update mission progress
+    const missions = getDailyMissions(today);
+    const updatedMissions = mp.missions.map((m, i) => {
+      if (m.completed) return m;
+      const def = missions[i];
+      if (!def || def.type !== type) return m;
+      let newProgress = m.progress;
+      if (type === "feed" || type === "play" || type === "game") newProgress += amount;
+      else if (type === "xp") newProgress = dailyXp;
+      else if (type === "streak") newProgress = prev.streakDays;
+      else if (type === "food") newProgress = dailyFood.length;
+      const completed = newProgress >= def.target;
+      return { ...m, progress: newProgress, completed };
+    });
+
+    persist({
+      ...prev,
+      missionProgress: { date: today, missions: updatedMissions },
+      dailyXpEarned: dailyXp,
+      dailyGamesCompleted: dailyGames,
+      dailyFoodUsed: dailyFood,
+    });
+  }, [persist]);
+
+  const claimMissionReward = useCallback((missionId: string) => {
+    const prev = stateRef.current;
+    const mp = { ...prev.missionProgress };
+    const missionIdx = mp.missions.findIndex((m) => m.id === missionId);
+    if (missionIdx === -1) return;
+    const mission = mp.missions[missionIdx];
+    if (!mission.completed || mission.claimed) return;
+
+    // Mark as claimed
+    const updatedMissions = [...mp.missions];
+    updatedMissions[missionIdx] = { ...mission, claimed: true };
+
+    // Get reward
+    const defs = getDailyMissions(mp.date);
+    const def = defs[missionIdx];
+    if (!def) return;
+
+    let next = { ...prev, missionProgress: { ...mp, missions: updatedMissions } };
+    // Add XP reward
+    const newXp = next.xp + def.reward.xp;
+    next = { ...next, xp: newXp, level: calculateLevel(newXp) };
+    // Add food reward
+    if (def.reward.food) {
+      const inv = { ...next.foodInventory };
+      inv[def.reward.food.id] = (inv[def.reward.food.id] || 0) + def.reward.food.quantity;
+      next = { ...next, foodInventory: inv };
+    }
+    persist(next);
+  }, [persist]);
+
+  // --- Adventure System ---
+  const startAdventure = useCallback((worldId: string, stageId: string) => {
+    const prev = stateRef.current;
+    persist({ ...prev, currentAdventure: { worldId, stageId, startedAt: Date.now() } });
+  }, [persist]);
+
+  const completeAdventureStage = useCallback((worldId: string, stageId: string) => {
+    const prev = stateRef.current;
+    const progress = { ...prev.adventureProgress };
+    if (!progress[worldId]) progress[worldId] = { stagesCompleted: [], bossDefeated: false };
+    if (!progress[worldId].stagesCompleted.includes(stageId)) {
+      progress[worldId] = { ...progress[worldId], stagesCompleted: [...progress[worldId].stagesCompleted, stageId] };
+    }
+    persist({ ...prev, adventureProgress: progress, currentAdventure: null });
+  }, [persist]);
+
+  const defeatBoss = useCallback((worldId: string) => {
+    const prev = stateRef.current;
+    const progress = { ...prev.adventureProgress };
+    if (!progress[worldId]) progress[worldId] = { stagesCompleted: [], bossDefeated: false };
+    progress[worldId] = { ...progress[worldId], bossDefeated: true };
+    persist({ ...prev, adventureProgress: progress });
+  }, [persist]);
+
+  const clearCurrentAdventure = useCallback(() => {
+    const prev = stateRef.current;
+    persist({ ...prev, currentAdventure: null });
+  }, [persist]);
+
   // Achievement checking — debounced, runs at most once per 2 seconds after state changes
   const achievementCallbackRef = useRef<((name: string, icon: string) => void) | null>(null);
   const achievementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -320,6 +474,14 @@ export function useGameState(): GameState {
     markEvolved,
     addPetXp,
     addDiaryEntry,
+    addFood,
+    useFood,
+    updateMissionProgress,
+    claimMissionReward,
+    startAdventure,
+    completeAdventureStage,
+    defeatBoss,
+    clearCurrentAdventure,
     achievementCallbackRef,
   };
 }

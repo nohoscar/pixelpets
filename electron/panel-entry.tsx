@@ -31,6 +31,14 @@ import { Onboarding, useOnboarding } from "../src/components/Onboarding";
 import { applyTheme, type ThemeId } from "../src/lib/themes";
 import { AmbientSound } from "../src/components/AmbientSound";
 import { Leaderboard } from "../src/components/Leaderboard";
+import { FoodInventory } from "../src/components/FoodInventory";
+import { DailyMissions } from "../src/components/DailyMissions";
+import { AdventureMode } from "../src/components/AdventureMode";
+import { WeatherWidget } from "../src/components/WeatherWidget";
+import { PetTrading } from "../src/components/PetTrading";
+import { PetInteractionDisplay } from "../src/components/PetInteractionDisplay";
+import { getGameReward, isFavoriteFood } from "../src/lib/foodSystem";
+import type { FoodItem } from "../src/lib/foodSystem";
 import { AnimatedCounter } from "../src/components/AnimatedCounter";
 import { randomThought } from "../src/components/pets/petThoughts";
 import type { PetStats } from "../src/components/pets/Pet";
@@ -86,6 +94,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("catch");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -94,6 +105,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("memory");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(30 - attempts).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -102,6 +116,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("simon");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(rounds * 2).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -110,6 +127,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("typing");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(score * 3).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -118,6 +138,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("reaction");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(avgMs < 300 ? 30 : 15).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -126,6 +149,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("quiz");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(correct * 3).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -134,6 +160,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("dodge");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -142,6 +171,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("whack");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -150,6 +182,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("snake");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -158,6 +193,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("flappy");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -166,6 +204,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("puzzle");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(score * 2).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -174,6 +215,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("colorMatch");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -182,6 +226,9 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.addXp(xp);
     gameState.addPetXp(currentKind, xp);
     gameState.incrementGamesPlayed("rhythm");
+    gameState.updateMissionProgress("game", 1);
+    gameState.updateMissionProgress("xp", xp);
+    getGameReward(score).forEach((r) => gameState.addFood(r.foodId, r.quantity));
     setActiveGame(null);
   };
 
@@ -220,6 +267,7 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.incrementFeedCount();
     gameState.addXp(5);
     gameState.addPetXp(currentKind, 5);
+    gameState.updateMissionProgress("feed", 1);
   };
 
   const handlePlay = () => {
@@ -227,6 +275,20 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
     gameState.incrementPlayCount();
     gameState.addXp(5);
     gameState.addPetXp(currentKind, 5);
+    gameState.updateMissionProgress("play", 1);
+  };
+
+  const handleFeedWithFood = (food: FoodItem) => {
+    if (!gameState.useFood(food.id)) return;
+    window.pixelpets?.petAction("feed");
+    gameState.incrementFeedCount();
+    const isFav = isFavoriteFood(currentKind, food.id);
+    const multiplier = isFav ? 2 : 1;
+    const xp = (food.happinessBoost * multiplier);
+    gameState.addXp(xp);
+    gameState.addPetXp(currentKind, xp);
+    gameState.updateMissionProgress("feed", 1);
+    gameState.updateMissionProgress("food", 1);
   };
 
   const handleSleep = () => {
@@ -303,6 +365,8 @@ function ElectronPanel({ gameState }: { gameState: ReturnType<typeof useGameStat
             activePetKind={currentKind}
             petName={gameState.petNames[currentKind] ?? ""}
             onPetNameChange={(name) => gameState.setPetName(currentKind, name)}
+            onFeedWithFood={handleFeedWithFood}
+            activePets={[currentKind]}
           />
 
           {/* Stats panel — reads from overlay via IPC */}
